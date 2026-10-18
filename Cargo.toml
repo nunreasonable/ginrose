@@ -1,0 +1,19 @@
+[package]
+name = "ginrose"
+version = "0.1.0"
+edition = "2024"
+description = "Roblox launcher for Linux, built around Rosemary"
+license = "MIT"
+
+[dependencies]
+gtk = { package = "gtk4", version = "0.11", features = ["v4_14"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_6"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = { version = "3", features = ["json"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
+regex = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1
