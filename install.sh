@@ -4,6 +4,11 @@
 #   curl -fsSL https://raw.githubusercontent.com/nunreasonable/ginrose/main/install.sh | sh
 #   ./install.sh --source     build from this checkout instead (needs cargo)
 #
+# Add --with-rosemary to also install Ginrose's build of Rosemary, which adds
+# voice chat and Ctrl for copy and paste but needs SDL 3.4 and a recent distro.
+# Without it, the setup offers that build or the official one.
+#   curl -fsSL .../install.sh | sh -s -- --with-rosemary
+#
 # Nothing is written outside your home folder.
 set -eu
 
@@ -29,9 +34,24 @@ if [ -n "$missing" ]; then
     die "Install those, then run this again."
 fi
 
-mkdir -p "$BIN_DIR" "$DATA_DIR/rosemary"
+from_source=0
+with_rosemary=0
+for arg in "$@"; do
+    case "$arg" in
+        --source) from_source=1 ;;
+        --with-rosemary) with_rosemary=1 ;;
+        *) die "Unknown option: $arg" ;;
+    esac
+done
 
-if [ "${1:-}" = "--source" ]; then
+mkdir -p "$BIN_DIR" "$DATA_DIR/rosemary"
+latest() {
+    curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
+        | grep -o "\"browser_download_url\": *\"[^\"]*$1\"" \
+        | head -n1 | sed 's/.*"\(https[^"]*\)"/\1/'
+}
+
+if [ "$from_source" = 1 ]; then
     command -v cargo >/dev/null || die "--source needs Rust (https://rustup.rs)."
     cd "$(dirname "$0")"
     say "Building Ginrose"
@@ -42,20 +62,22 @@ else
     tmp=$(mktemp -d)
     trap 'rm -rf "$tmp"' EXIT
     say "Finding the latest release"
-    url=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-        | grep -o '"browser_download_url": *"[^"]*x86_64\.tar\.gz"' \
-        | head -n1 | sed 's/.*"\(https[^"]*\)"/\1/')
+    url=$(latest 'ginrose-[^"]*x86_64\.tar\.gz')
     [ -n "$url" ] || die "No release found for $REPO."
     say "Downloading $(basename "$url")"
     curl -fL --progress-bar "$url" -o "$tmp/ginrose.tar.gz"
     tar -xzf "$tmp/ginrose.tar.gz" -C "$tmp"
     install -m755 "$tmp/ginrose" "$BIN_DIR/ginrose"
-    # A Rosemary built with Ginrose's fixes (microphone, Ctrl shortcuts), when
-    # the release carries one. Without it, the setup offers the official build.
-    if [ -f "$tmp/rosemary" ]; then
-        install -m755 "$tmp/rosemary" "$DATA_DIR/rosemary/rosemary.new"
-        mv -f "$DATA_DIR/rosemary/rosemary.new" "$DATA_DIR/rosemary/rosemary"
-    fi
+fi
+
+if [ "$with_rosemary" = 1 ]; then
+    command -v curl >/dev/null || die "curl is needed to download Rosemary."
+    url=$(latest 'rosemary-ginrose-x86_64')
+    [ -n "$url" ] || die "No Rosemary build in the latest release of $REPO."
+    say "Downloading Ginrose's Rosemary"
+    curl -fL --progress-bar "$url" -o "$DATA_DIR/rosemary/rosemary.new"
+    chmod 755 "$DATA_DIR/rosemary/rosemary.new"
+    mv -f "$DATA_DIR/rosemary/rosemary.new" "$DATA_DIR/rosemary/rosemary"
 fi
 
 "$BIN_DIR/ginrose" install-desktop

@@ -42,7 +42,7 @@ Roblox reads local settings from.
   missing NVIDIA Vulkan driver, and a video wallpaper (mpvpaper) that keeps
   decoding behind the game.
 - **Copy and paste with Ctrl.** The Mac client expects Command, which most
-  Linux desktops keep for themselves.
+  Linux desktops keep for themselves (needs Ginrose's Rosemary build, below).
 - Opens the **Play buttons on roblox.com**, and gives the Roblox window its
   icon in taskbars and docks.
 
@@ -53,8 +53,9 @@ curl -fsSL https://raw.githubusercontent.com/nunreasonable/ginrose/main/install.
 ```
 
 The installer puts `ginrose` in `~/.local/bin`, adds it to your app menu and
-opens the setup, which finds or downloads Rosemary and Roblox. It needs GTK 4
-and libadwaita. Everything stays in your home folder.
+opens the setup, which finds or downloads Rosemary and Roblox. It needs GTK 4,
+libadwaita and glibc 2.39 or newer (Ubuntu 24.04, Debian 13, Fedora 40 and
+later). Everything stays in your home folder.
 
 From a checkout, with Rust installed:
 
@@ -62,12 +63,25 @@ From a checkout, with Rust installed:
 ./install.sh --source
 ```
 
+### Rosemary
+
+The setup offers two Rosemary builds:
+
+- **The official one** from [microlift/rosemary](https://github.com/microlift/rosemary).
+  It bundles what it needs and runs on most distros.
+- **Ginrose's build**, from [a fork](https://github.com/nunreasonable/rosemary/tree/mic-input)
+  that adds microphone input for voice chat and lets Ctrl stand in for Command
+  in copy and paste. It needs SDL 3.4 from your distro and glibc 2.39 or newer.
+  To install it with Ginrose:
+
+  ```sh
+  curl -fsSL https://raw.githubusercontent.com/nunreasonable/ginrose/main/install.sh | sh -s -- --with-rosemary
+  ```
+
 ## Discord
 
-Rich Presence works out of the box while the Discord app is open; it shows as
-"Playing Roblox". To show your own application instead, put its ID under
-Settings → Discord, and upload `assets/ginrose.png` to it as an art asset named
-`ginrose`.
+Rich Presence works out of the box while the Discord app is open: it shows the
+game you're in, its icon, how long you've been playing and a link to it.
 
 ## Commands
 

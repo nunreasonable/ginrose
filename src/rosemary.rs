@@ -1,5 +1,6 @@
-//! Getting a Rosemary for a machine that has none: the latest official
-//! AppImage from microlift/rosemary's releases.
+//! Getting a Rosemary for a machine that has none: either the official
+//! AppImage from microlift/rosemary, or the build Ginrose publishes from its
+//! fork, which adds microphone input and Ctrl for copy and paste.
 
 use std::io::{Read, Write};
 
@@ -7,13 +8,26 @@ use serde_json::Value;
 
 use crate::{paths, roblox};
 
-const RELEASES: &str = "https://api.github.com/repos/microlift/rosemary/releases/latest";
+const OFFICIAL: &str = "https://api.github.com/repos/microlift/rosemary/releases/latest";
+const GINROSE: &str = "https://api.github.com/repos/nunreasonable/ginrose/releases/latest";
+/// The fork build's release asset: a plain binary, not an AppImage.
+const FORK_ASSET: &str = "rosemary-ginrose-x86_64";
 
-pub fn download_official(progress: roblox::Progress) -> Result<std::path::PathBuf, String> {
+#[derive(Clone, Copy)]
+pub enum Source {
+    Official,
+    Ginrose,
+}
+
+pub fn download(source: Source, progress: roblox::Progress) -> Result<std::path::PathBuf, String> {
+    let (api, wanted, what) = match source {
+        Source::Official => (OFFICIAL, "-x86_64.AppImage", "Rosemary"),
+        Source::Ginrose => (GINROSE, FORK_ASSET, "Ginrose's Rosemary"),
+    };
     let agent = roblox::agent();
-    progress("Looking up the latest Rosemary", None);
+    progress(&format!("Looking up the latest {what}"), None);
     let release: Value = agent
-        .get(RELEASES)
+        .get(api)
         .header("Accept", "application/vnd.github+json")
         .call()
         .map_err(|e| format!("could not reach GitHub: {e}"))?
@@ -26,8 +40,8 @@ pub fn download_official(progress: roblox::Progress) -> Result<std::path::PathBu
         .into_iter()
         .flatten()
         .filter_map(|asset| asset["browser_download_url"].as_str())
-        .find(|url| url.ends_with("-x86_64.AppImage"))
-        .ok_or("the latest Rosemary release has no x86_64 AppImage")?
+        .find(|url| url.ends_with(wanted))
+        .ok_or(format!("the latest {what} release has no x86_64 build"))?
         .to_string();
     let target = paths::bundled_rosemary();
     std::fs::create_dir_all(target.parent().unwrap()).map_err(|e| e.to_string())?;
@@ -35,7 +49,7 @@ pub fn download_official(progress: roblox::Progress) -> Result<std::path::PathBu
     let mut response = agent
         .get(&url)
         .call()
-        .map_err(|e| format!("could not download Rosemary: {e}"))?;
+        .map_err(|e| format!("could not download {what}: {e}"))?;
     let total = response
         .headers()
         .get("content-length")
@@ -53,13 +67,13 @@ pub fn download_official(progress: roblox::Progress) -> Result<std::path::PathBu
         file.write_all(&buffer[..n]).map_err(|e| e.to_string())?;
         done += n as u64;
         progress(
-            &format!("Downloading Rosemary {tag} ({} MB)", done >> 20),
+            &format!("Downloading {what} {tag} ({} MB)", done >> 20),
             total.map(|t| done as f64 / t as f64),
         );
     }
     if total.is_some_and(|t| t != done) {
         let _ = std::fs::remove_file(&partial);
-        return Err("the Rosemary download stopped early".into());
+        return Err(format!("the {what} download stopped early"));
     }
     use std::os::unix::fs::PermissionsExt;
     std::fs::set_permissions(&partial, std::fs::Permissions::from_mode(0o755))

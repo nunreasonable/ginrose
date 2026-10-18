@@ -107,7 +107,7 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     // Rosemary.
     let (rosemary_page, inner) = page(
         "Rosemary",
-        "Rosemary is what runs macOS programs on Linux. Use one you have, or download the official build.",
+        "Rosemary is what runs macOS programs on Linux. Use one you have, or download one. Ginrose's build adds voice chat and Ctrl for copy and paste, but needs SDL 3.4 and a recent distro; the official one runs anywhere.",
     );
     let found = gtk::Label::new(None);
     found.set_wrap(true);
@@ -126,6 +126,7 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     let choose = gtk::Button::with_label("Choose a Rosemary binary…");
     let fetch = gtk::Button::with_label("Download the official Rosemary");
     fetch.add_css_class("suggested-action");
+    let fetch_fork = gtk::Button::with_label("Download Ginrose's Rosemary");
     let bar = gtk::ProgressBar::new();
     bar.set_visible(false);
     let line = gtk::Label::new(None);
@@ -135,6 +136,7 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
         found.upcast_ref::<gtk::Widget>(),
         choose.upcast_ref(),
         fetch.upcast_ref(),
+        fetch_fork.upcast_ref(),
         bar.upcast_ref(),
         line.upcast_ref(),
     ] {
@@ -159,21 +161,29 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
             });
         });
     }
-    {
+    for (button, source) in [
+        (fetch.clone(), rosemary::Source::Official),
+        (fetch_fork.clone(), rosemary::Source::Ginrose),
+    ] {
         let config = config.clone();
         let describe_found = describe_found.clone();
         let (bar, line) = (bar.clone(), line.clone());
-        fetch.connect_clicked(move |button| {
-            button.set_sensitive(false);
+        let both = [fetch.clone(), fetch_fork.clone()];
+        button.connect_clicked(move |_| {
+            for b in &both {
+                b.set_sensitive(false);
+            }
             let config = config.clone();
             let describe_found = describe_found.clone();
-            let (button, line_done) = (button.clone(), line.clone());
+            let (both, line_done) = (both.clone(), line.clone());
             in_background(
                 &bar,
                 &line,
-                |progress| rosemary::download_official(progress),
+                move |progress| rosemary::download(source, progress),
                 move |result| {
-                    button.set_sensitive(true);
+                    for b in &both {
+                        b.set_sensitive(true);
+                    }
                     match result {
                         Ok(_) => {
                             config.borrow_mut().rosemary.clear();
