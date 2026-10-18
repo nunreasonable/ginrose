@@ -17,6 +17,7 @@
 > for you, an issue is welcome, but it may not get an answer soon, or at all.
 >
 > Rosemary itself is experimental, and so is running Roblox on it.
+> IF YOU USE THIS TO EXPLOIT I AM PERSONALLY GOING TO SEND 10 MISSILES TO YOUR HOME!!! TWAT!
 
 Ginrose runs the official macOS Roblox client on Linux through Rosemary, a
 macOS compatibility layer. It downloads the client straight from Roblox, keeps
