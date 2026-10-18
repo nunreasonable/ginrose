@@ -5,8 +5,8 @@ use std::process::Command;
 
 use crate::paths;
 
-const APP_ID: &str = "io.github.nunreasonable.Ginrose";
-const PLAYER_ID: &str = "io.github.nunreasonable.Ginrose.Player";
+const APP_ID: &str = "me.daeese.apps.ginrose";
+const PLAYER_ID: &str = "me.daeese.apps.ginrose.player";
 /// What Rosemary names the Roblox window (the bundle identifier). Taskbars and
 /// shells match a window to an icon through a desktop entry of the same name.
 const WINDOW_ID: &str = "com.roblox.RobloxPlayer";
@@ -62,9 +62,19 @@ fn quote(arg: &str) -> String {
     }
 }
 
+/// What makes the Flatpak's Player entry open Roblox links, to run on the host:
+/// a sandboxed program cannot change that itself.
+pub fn host_default_command() -> String {
+    format!("xdg-mime default {PLAYER_ID}.desktop {}", SCHEMES.join(" "))
+}
+
 /// Write both entries. With `default`, also make Ginrose the program that opens
-/// Roblox links, taking them over from whatever opened them before.
+/// Roblox links, taking them over from whatever opened them before. The
+/// Flatpak's entries come with the package.
 pub fn install(default: bool) -> Result<(), String> {
+    if paths::in_flatpak() {
+        return Ok(());
+    }
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let exe = quote(&exe.to_string_lossy());
     install_icons()?;
@@ -99,6 +109,9 @@ pub fn install(default: bool) -> Result<(), String> {
 }
 
 pub fn uninstall() {
+    if paths::in_flatpak() {
+        return;
+    }
     let dir = paths::applications_dir();
     let _ = std::fs::remove_file(dir.join(format!("{APP_ID}.desktop")));
     let _ = std::fs::remove_file(dir.join(format!("{PLAYER_ID}.desktop")));
@@ -121,4 +134,8 @@ pub fn is_default() -> bool {
 
 pub fn app_id() -> &'static str {
     APP_ID
+}
+
+pub fn player_id() -> &'static str {
+    PLAYER_ID
 }

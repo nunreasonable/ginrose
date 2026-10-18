@@ -49,35 +49,37 @@ Roblox reads local settings from.
 
 ## Install
 
+Ginrose is on Flathub:
+
 ```sh
-curl -fsSL https://raw.githubusercontent.com/nunreasonable/ginrose/main/install.sh | sh
+flatpak install flathub me.daeese.apps.ginrose
 ```
 
-The installer puts `ginrose` in `~/.local/bin`, adds it to your app menu and
-opens the setup, which finds or downloads Rosemary and Roblox. It needs GTK 4,
-libadwaita and glibc 2.39 or newer (Ubuntu 24.04, Debian 13, Fedora 40 and
-later). Everything stays in your home folder.
+The Flatpak comes with Ginrose's build of Rosemary, from
+[a fork](https://github.com/nunreasonable/rosemary/tree/mic-input) that adds
+microphone input for voice chat and lets Ctrl stand in for Command in copy and
+paste. The setup downloads Roblox on the first run.
 
-From a checkout, with Rust installed:
+To have it open the Play buttons on roblox.com when another app already does,
+run once:
+
+```sh
+xdg-mime default me.daeese.apps.ginrose.player.desktop x-scheme-handler/roblox-player x-scheme-handler/roblox
+```
+
+### Building the Flatpak
+
+```sh
+tools/flatpak.sh path/to/rosemary --install
+```
+
+### Native build
+
+For the author's machine only, with Rust installed:
 
 ```sh
 ./install.sh --source
 ```
-
-### Rosemary
-
-The setup offers two Rosemary builds:
-
-- **The official one** from [microlift/rosemary](https://github.com/microlift/rosemary).
-  It bundles what it needs and runs on most distros.
-- **Ginrose's build**, from [a fork](https://github.com/nunreasonable/rosemary/tree/mic-input)
-  that adds microphone input for voice chat and lets Ctrl stand in for Command
-  in copy and paste. It needs SDL 3.4 from your distro and glibc 2.39 or newer.
-  To install it with Ginrose:
-
-  ```sh
-  curl -fsSL https://raw.githubusercontent.com/nunreasonable/ginrose/main/install.sh | sh -s -- --with-rosemary
-  ```
 
 ## Discord
 
@@ -104,4 +106,4 @@ ginrose status          what is installed and what would get in the way
 - The BloxstrapRPC message format comes from
   [Bloxstrap](https://github.com/bloxstraplabs/bloxstrap).
 
-Ginrose is not affiliated with Roblox Corporation. MIT licensed; see [LICENSE](LICENSE).
+Ginrose is not affiliated with Roblox Corporation. Ginrose is proprietary software; see [LICENSE](LICENSE). Rosemary is GPL-3.0.

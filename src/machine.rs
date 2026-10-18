@@ -104,9 +104,11 @@ pub fn check(config: &crate::config::Config, rosemary: Option<&Path>) -> Vec<War
             detail: "\"NVIDIA only\" is on, but there is no NVIDIA Vulkan driver; Vulkan picks a GPU by itself.".into(),
         });
     }
+    // The Flatpak can neither see mpvpaper nor write its pause list.
+    let mpvpaper = !paths::in_flatpak() && process_running("mpvpaper");
     if config.pause_wallpaper
         && let Some(rosemary) = rosemary
-        && process_running("mpvpaper")
+        && mpvpaper
         && add_to_pause_list(rosemary)
     {
         warnings.push(Warning {

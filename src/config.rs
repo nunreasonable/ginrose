@@ -167,6 +167,10 @@ impl Config {
     }
 
     pub fn rosemary_path(&self) -> Option<PathBuf> {
+        if paths::in_flatpak() {
+            let path = PathBuf::from(paths::FLATPAK_ROSEMARY);
+            return path.is_file().then_some(path);
+        }
         if !self.rosemary.is_empty() {
             let path = PathBuf::from(&self.rosemary);
             return path.is_file().then_some(path);

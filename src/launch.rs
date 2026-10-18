@@ -6,7 +6,7 @@ use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
 use crate::config::Config;
-use crate::{flags, machine, paths, roblox, settings};
+use crate::{flags, integrity, machine, paths, roblox, settings};
 
 /// Process ids of the Rosemary processes running a build Ginrose installed,
 /// with the build each runs.
@@ -98,10 +98,22 @@ pub fn prepare(
             return Err(format!("`rosemary prefix create` failed ({status})"));
         }
     }
+    if let Some(name) = config
+        .extra_env
+        .keys()
+        .find(|name| !integrity::user_variable_allowed(name))
+    {
+        return Err(format!(
+            "the extra environment variable {name} can load code into Roblox; remove it from Ginrose's config"
+        ));
+    }
     let effective = config.effective(uri.and_then(roblox::place_from_uri));
     settings::apply(effective.frame_cap, effective.quality);
     flags::write(&build.app(), &effective.flags)
         .map_err(|e| format!("could not write the FastFlags: {e}"))?;
+    progress("Checking Roblox", None);
+    integrity::client(&build.app()).map_err(|e| integrity::explain(&e))?;
+    integrity::prefix(&rosemary, ours().is_empty()).map_err(|e| integrity::explain(&e))?;
     Ok(Prepared {
         rosemary,
         build,
@@ -111,6 +123,12 @@ pub fn prepare(
 }
 
 fn environment(config: &Config, command: &mut Command) {
+    for (name, _) in std::env::vars_os() {
+        let name = name.to_string_lossy();
+        if integrity::loads_code(&name) || name.starts_with("ROSEMARY_") {
+            command.env_remove(name.as_ref());
+        }
+    }
     command.env("ROSEMARY_PREFIX", paths::prefix());
     command.env("ROSEMARY_PREFIX_SETUP", "download");
     if !config.vsync {
@@ -135,7 +153,46 @@ fn environment(config: &Config, command: &mut Command) {
     if config.control_edit_keys {
         command.env("ROSEMARY_CONTROL_EDIT_KEYS", "1");
     }
+    if config.mangohud {
+        command.env("MANGOHUD", "1");
+    }
+    if paths::in_flatpak() {
+        // Matches the Player entry the package exports, for the window's icon.
+        command.env("SDL_APP_ID", crate::desktop::player_id());
+    }
     command.envs(&config.extra_env);
+}
+
+/// Hand Roblox to GameMode, through its portal inside the Flatpak.
+fn register_with_gamemode(pid: u32) {
+    use gtk::gio;
+    use gtk::prelude::ToVariant;
+    let Ok(bus) = gio::bus_get_sync(gio::BusType::Session, None::<&gio::Cancellable>) else {
+        return;
+    };
+    let (name, path, interface) = match paths::in_flatpak() {
+        true => (
+            "org.freedesktop.portal.Desktop",
+            "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.GameMode",
+        ),
+        false => (
+            "com.feralinteractive.GameMode",
+            "/com/feralinteractive/GameMode",
+            "com.feralinteractive.GameMode",
+        ),
+    };
+    let _ = bus.call_sync(
+        Some(name),
+        path,
+        interface,
+        "RegisterGame",
+        Some(&(pid as i32,).to_variant()),
+        None,
+        gio::DBusCallFlags::NONE,
+        2000,
+        None::<&gio::Cancellable>,
+    );
 }
 
 pub struct Launched {
@@ -146,16 +203,7 @@ pub struct Launched {
 
 pub fn spawn(config: &Config, prepared: &Prepared, uri: Option<&str>) -> Result<Launched, String> {
     stop_running();
-    let mut argv: Vec<PathBuf> = Vec::new();
-    if config.gamemode && machine::which("gamemoderun") {
-        argv.push("gamemoderun".into());
-    }
-    if config.mangohud && machine::which("mangohud") {
-        argv.push("mangohud".into());
-    }
-    argv.push(prepared.rosemary.clone());
-    let mut command = Command::new(&argv[0]);
-    command.args(&argv[1..]);
+    let mut command = Command::new(&prepared.rosemary);
     command.arg("run").arg(prepared.build.app());
     if let Some(uri) = uri.filter(|u| !u.is_empty()) {
         command.arg("-protocolString").arg(uri);
@@ -169,6 +217,9 @@ pub fn spawn(config: &Config, prepared: &Prepared, uri: Option<&str>) -> Result<
     let child = command
         .spawn()
         .map_err(|e| format!("could not start Roblox: {e}"))?;
+    if config.gamemode {
+        register_with_gamemode(child.id());
+    }
     Ok(Launched { child, log: path })
 }
 

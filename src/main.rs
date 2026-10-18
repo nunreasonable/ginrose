@@ -2,6 +2,7 @@ mod config;
 mod desktop;
 mod discord;
 mod flags;
+mod integrity;
 mod launch;
 mod machine;
 mod paths;
@@ -20,6 +21,8 @@ const USAGE: &str = "usage: ginrose [command]
   setup                   run the setup again
   launch [link]           start Roblox, joining the game a roblox-player: or roblox: link names
   update                  download the current Roblox if it is not installed
+  verify [Roblox.app]     check that Roblox and the prefix are exactly as signed
+  repair                  download a clean Roblox and put the prefix's system files back
   rosemary <path>         copy a Rosemary binary into Ginrose and use it
   install-desktop [--default]
                           add menu entries; --default also opens Roblox links with Ginrose
@@ -60,6 +63,56 @@ fn cli_launch(uri: Option<String>) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+fn cli_verify() -> ExitCode {
+    let mut ok = true;
+    match roblox::installed() {
+        Some(build) => {
+            let started = std::time::Instant::now();
+            match integrity::client(&build.app()) {
+                Ok(()) => println!(
+                    "roblox:   {} as Roblox signed it ({:.1} s)",
+                    build.version,
+                    started.elapsed().as_secs_f64()
+                ),
+                Err(e) => {
+                    println!("roblox:   modified: {e}");
+                    ok = false;
+                }
+            }
+        }
+        None => println!("roblox:   not installed"),
+    }
+    match config::Config::load().rosemary_path() {
+        _ if !paths::prefix().join("root").is_dir() => println!("prefix:   not created yet"),
+        Some(rosemary) => match integrity::prefix(&rosemary, false) {
+            Ok(()) => println!("prefix:   system files match the pinned base"),
+            Err(e) => {
+                println!("prefix:   {e}");
+                ok = false;
+            }
+        },
+        None => println!("prefix:   no Rosemary to check it with"),
+    }
+    if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+}
+
+fn cli_repair() -> ExitCode {
+    launch::stop_running();
+    if let Err(e) = roblox::reinstall(&print_progress) {
+        eprintln!("\nginrose: {e}");
+        return ExitCode::FAILURE;
+    }
+    eprintln!();
+    if let Some(rosemary) = config::Config::load().rosemary_path()
+        && paths::prefix().join("root").is_dir()
+        && let Err(e) = integrity::repair_prefix(&rosemary)
+    {
+        eprintln!("ginrose: could not repair the prefix: {e}");
+        return ExitCode::FAILURE;
+    }
+    cli_verify()
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
@@ -80,6 +133,24 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
+        Some("verify") => match args.get(1) {
+            Some(app) => match integrity::client(std::path::Path::new(app)) {
+                Ok(()) => {
+                    println!("{app}: as Roblox signed it");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    println!("{app}: modified: {e}");
+                    ExitCode::FAILURE
+                }
+            },
+            None => cli_verify(),
+        },
+        Some("repair") => cli_repair(),
+        Some("rosemary") if paths::in_flatpak() => {
+            eprintln!("ginrose: the Flatpak runs only the Rosemary it comes with");
+            ExitCode::FAILURE
+        }
         Some("rosemary") => {
             let Some(source) = args.get(1) else {
                 eprintln!("{USAGE}");

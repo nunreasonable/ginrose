@@ -264,11 +264,29 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
         .subtitle("Takes them over from whatever opens them now")
         .active(true)
         .build();
-    group.add(&links);
-    inner.append(&group);
+    if crate::paths::in_flatpak() {
+        let hint = gtk::Label::new(Some(
+            "If another app opens the Play buttons on roblox.com, run this once in a terminal to hand them to Ginrose:",
+        ));
+        hint.set_wrap(true);
+        hint.set_xalign(0.0);
+        let command = gtk::Label::new(Some(&desktop::host_default_command()));
+        command.set_selectable(true);
+        command.set_wrap(true);
+        command.set_xalign(0.0);
+        command.add_css_class("monospace");
+        inner.append(&hint);
+        inner.append(&command);
+    } else {
+        group.add(&links);
+        inner.append(&group);
+    }
     stack.add_named(&desktop_page, Some("desktop"));
 
-    let pages = ["welcome", "rosemary", "roblox", "discord", "desktop"];
+    let pages: &[&str] = match crate::paths::in_flatpak() {
+        true => &["welcome", "roblox", "discord", "desktop"],
+        false => &["welcome", "rosemary", "roblox", "discord", "desktop"],
+    };
     let index = Rc::new(Cell::new(0usize));
     let back = gtk::Button::with_label("Back");
     let next = gtk::Button::with_label("Next");

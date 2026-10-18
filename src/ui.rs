@@ -512,16 +512,18 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
             save(&shared);
         },
     ));
-    let shared = config.clone();
-    machine.add(&switch_row(
-        "Pause video wallpaper",
-        "Through mpvpaper's pause list",
-        c.pause_wallpaper,
-        move |on| {
-            shared.borrow_mut().pause_wallpaper = on;
-            save(&shared);
-        },
-    ));
+    if !crate::paths::in_flatpak() {
+        let shared = config.clone();
+        machine.add(&switch_row(
+            "Pause video wallpaper",
+            "Through mpvpaper's pause list",
+            c.pause_wallpaper,
+            move |on| {
+                shared.borrow_mut().pause_wallpaper = on;
+                save(&shared);
+            },
+        ));
+    }
     let shared = config.clone();
     machine.add(&switch_row(
         "Control for copy and paste",
@@ -563,7 +565,9 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
             }));
         });
     }
-    rosemary.add(&path);
+    if !crate::paths::in_flatpak() {
+        rosemary.add(&path);
+    }
     let links = adw::ActionRow::builder()
         .title("Open Roblox links with Ginrose")
         .subtitle(if desktop::is_default() {
@@ -585,7 +589,12 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
             Err(e) => toasts.add_toast(adw::Toast::new(&e)),
         });
     }
-    links.add_suffix(&take);
+    if crate::paths::in_flatpak() {
+        links.set_subtitle(&format!("Run on the host: {}", desktop::host_default_command()));
+        links.set_subtitle_selectable(true);
+    } else {
+        links.add_suffix(&take);
+    }
     rosemary.add(&links);
     page.add(&rosemary);
     page.upcast()

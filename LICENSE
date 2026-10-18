@@ -1,21 +1,33 @@
-MIT License
+Ginrose
+Copyright (c) 2026 nunreasonable. All rights reserved.
 
-Copyright (c) 2026 nunreasonable
+Ginrose is proprietary software. Its source code is not public, and nothing in
+this notice grants any right to it.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+You may download, install and use the Ginrose builds the author publishes, and
+redistribute them unmodified and free of charge, including through software
+stores such as Flathub, as long as this notice goes with them.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+You may not:
+
+  - modify, adapt or translate Ginrose, or make anything derived from it;
+  - decompile, disassemble or otherwise reverse engineer it, or work around
+    its check that Roblox runs unmodified, except where applicable law allows
+    this regardless of this notice;
+  - sell, rent or sublicense it, or bundle it with anything sold;
+  - use it to cheat in, exploit or modify Roblox.
+
+Any other use needs the author's written permission.
+
+Other people's software that comes with Ginrose keeps its own license. The
+Flatpak includes Rosemary, which is licensed under the GNU General Public
+License version 3; its source is at https://github.com/nunreasonable/rosemary.
+
+Ginrose is not affiliated with or endorsed by Roblox Corporation.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

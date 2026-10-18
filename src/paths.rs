@@ -71,3 +71,12 @@ pub fn runtime_dir() -> PathBuf {
 pub fn home_dir() -> PathBuf {
     home()
 }
+
+/// Inside the Flatpak, where Rosemary comes with Ginrose and the menu entries
+/// are the package's.
+pub fn in_flatpak() -> bool {
+    std::path::Path::new("/.flatpak-info").is_file()
+}
+
+/// The Rosemary the Flatpak ships, the only one it runs.
+pub const FLATPAK_ROSEMARY: &str = "/app/bin/rosemary";

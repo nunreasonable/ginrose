@@ -238,6 +238,14 @@ pub fn ensure(check: bool, progress: Progress) -> Result<Build, String> {
     Ok(latest)
 }
 
+/// Throw the installed build away and download it again.
+pub fn reinstall(progress: Progress) -> Result<Build, String> {
+    if let Some(build) = installed() {
+        std::fs::remove_dir_all(build.directory()).map_err(|e| e.to_string())?;
+    }
+    ensure(true, progress)
+}
+
 /// Remove every build but `keep`, skipping any a running Roblox still uses.
 fn remove_old(keep: &Build) {
     let Ok(entries) = std::fs::read_dir(paths::versions_dir()) else {

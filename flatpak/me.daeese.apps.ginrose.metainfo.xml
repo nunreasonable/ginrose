@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>me.daeese.apps.ginrose</id>
+  <name>Ginrose</name>
+  <summary>Run the official macOS Roblox client on Linux</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <developer id="me.daeese">
+    <name>nunreasonable</name>
+  </developer>
+  <description>
+    <p>
+      Ginrose runs the official macOS Roblox client on Linux through Rosemary,
+      a macOS compatibility layer. It downloads the client straight from
+      Roblox, keeps it up to date, sets it up to run well and shows what you
+      are playing on Discord.
+    </p>
+    <p>
+      The client is never modified, and Ginrose refuses to run one that was:
+      before every launch it checks Roblox's own code signature on every file.
+    </p>
+  </description>
+  <launchable type="desktop-id">me.daeese.apps.ginrose.desktop</launchable>
+  <url type="homepage">https://apps.daeese.me/ginrose</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.2.0" date="2026-10-18"/>
+  </releases>
+</component>
