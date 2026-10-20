@@ -1,6 +1,7 @@
 //! Getting a Rosemary for a machine that has none: either the official
-//! AppImage from microlift/rosemary, or the build Ginrose publishes from its
-//! fork, which adds microphone input and Ctrl for copy and paste.
+//! AppImage from microlift/rosemary's latest release, or the build Ginrose
+//! publishes from Rosemary's main branch, which already has microphone input
+//! and Ctrl for copy and paste.
 
 use std::io::{Read, Write};
 
@@ -9,8 +10,8 @@ use serde_json::Value;
 use crate::{paths, roblox};
 
 const OFFICIAL: &str = "https://api.github.com/repos/microlift/rosemary/releases/latest";
-const GINROSE: &str = "https://api.github.com/repos/nunreasonable/ginrose/releases/latest";
-/// The fork build's release asset: a plain binary, not an AppImage.
+const GINROSE: &str = "https://api.github.com/repos/nunreasonable/ginrose-flatpak/releases/latest";
+/// Ginrose's build as a release asset: a plain binary, not an AppImage.
 const FORK_ASSET: &str = "rosemary-ginrose-x86_64";
 
 #[derive(Clone, Copy)]

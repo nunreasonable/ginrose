@@ -56,9 +56,9 @@ flatpak install flathub me.daeese.apps.ginrose
 ```
 
 The Flatpak comes with Ginrose's build of Rosemary, from
-[a fork](https://github.com/nunreasonable/rosemary/tree/mic-input) that adds
+[Rosemary's main branch](https://github.com/microlift/rosemary), which has
 microphone input for voice chat and lets Ctrl stand in for Command in copy and
-paste. The setup downloads Roblox on the first run.
+paste before they reach a release. The setup downloads Roblox on the first run.
 
 To have it open the Play buttons on roblox.com when another app already does,
 run once:
