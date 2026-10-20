@@ -1,18 +1,18 @@
 #!/bin/sh
-# Install Ginrose for the current user.
+# Install Ginrose for the current user, without Flatpak.
 #
-#   curl -fsSL https://raw.githubusercontent.com/nunreasonable/ginrose/main/install.sh | sh
+#   ./install.sh              download the latest release from ginrose-flatpak
 #   ./install.sh --source     build from this checkout instead (needs cargo)
 #
-# Add --with-rosemary to also install Ginrose's build of Rosemary, which adds
-# voice chat and Ctrl for copy and paste but needs SDL 3.4 and a recent distro.
-# Without it, the setup offers that build or the official one.
-#   curl -fsSL .../install.sh | sh -s -- --with-rosemary
+# Add --with-rosemary to also install Ginrose's build of Rosemary, which is
+# newer than the latest release and has voice chat and Ctrl for copy and paste
+# but needs SDL 3.4 and a recent distro. Without it, the setup offers that
+# build or the official one.
 #
 # Nothing is written outside your home folder.
 set -eu
 
-REPO="nunreasonable/ginrose"
+REPO="nunreasonable/ginrose-flatpak"
 BIN_DIR="${XDG_BIN_HOME:-$HOME/.local/bin}"
 DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/ginrose"
 
