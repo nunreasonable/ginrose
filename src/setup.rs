@@ -107,7 +107,7 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     // Rosemary.
     let (rosemary_page, inner) = page(
         "Rosemary",
-        "Rosemary is what runs macOS programs on Linux. Use one you have, or download one. Ginrose's build is newer than the latest release and has voice chat and Ctrl for copy and paste, but needs SDL 3.4 and a recent distro; the official one runs anywhere.",
+        "Rosemary is what runs macOS programs on Linux. Use one you have, or download one. Both have voice chat and Ctrl for copy and paste. Ginrose's build also keeps the cursor in sync after switching windows, but needs SDL 3.4 and a recent distro; the official one runs anywhere.",
     );
     let found = gtk::Label::new(None);
     found.set_wrap(true);

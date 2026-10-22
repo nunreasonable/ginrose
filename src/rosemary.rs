@@ -1,7 +1,6 @@
 //! Getting a Rosemary for a machine that has none: either the official
-//! AppImage from microlift/rosemary's latest release, or the build Ginrose
-//! publishes from Rosemary's main branch, which already has microphone input
-//! and Ctrl for copy and paste.
+//! AppImage from microlift/rosemary's latest release, or Ginrose's build of
+//! that release with the cursor sync fix on top, as a plain binary.
 
 use std::io::{Read, Write};
 

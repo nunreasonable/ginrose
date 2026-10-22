@@ -4,10 +4,9 @@
 #   ./install.sh              download the latest release from ginrose-flatpak
 #   ./install.sh --source     build from this checkout instead (needs cargo)
 #
-# Add --with-rosemary to also install Ginrose's build of Rosemary, which is
-# newer than the latest release and has voice chat and Ctrl for copy and paste
-# but needs SDL 3.4 and a recent distro. Without it, the setup offers that
-# build or the official one.
+# Add --with-rosemary to also install Ginrose's build of Rosemary, the latest
+# release plus a cursor sync fix, which needs SDL 3.4 and a recent distro. Without
+# it, the setup offers that build or the official AppImage.
 #
 # Nothing is written outside your home folder.
 set -eu
