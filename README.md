@@ -56,7 +56,7 @@ flatpak install flathub me.daeese.apps.ginrose
 ```
 
 The Flatpak comes with Ginrose's build of
-[Rosemary 0.4.0](https://github.com/microlift/rosemary/releases/tag/v0.4.0),
+[Rosemary 0.4.1](https://github.com/microlift/rosemary/releases/tag/v0.4.1),
 which has microphone input for voice chat and lets Ctrl stand in for Command in
 copy and paste, plus [a fix](https://github.com/microlift/rosemary/pull/165)
 that keeps the mouse cursor in sync after switching windows. The setup downloads Roblox on the first run.

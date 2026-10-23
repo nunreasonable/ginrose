@@ -1,6 +1,6 @@
 [package]
 name = "ginrose"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 description = "Roblox launcher for Linux, built around Rosemary"
 license-file = "LICENSE"
