@@ -1,6 +1,6 @@
 //! Getting a Rosemary for a machine that has none: either the official
 //! AppImage from microlift/rosemary's latest release, or Ginrose's build of
-//! that release with the cursor sync fix on top, as a plain binary.
+//! that release with a few fixes on top, as a plain binary.
 
 use std::io::{Read, Write};
 

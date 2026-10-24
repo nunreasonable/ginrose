@@ -5,7 +5,7 @@
 #   ./install.sh --source     build from this checkout instead (needs cargo)
 #
 # Add --with-rosemary to also install Ginrose's build of Rosemary, the latest
-# release plus a cursor sync fix, which needs SDL 3.4 and a recent distro. Without
+# release plus a few fixes, which needs SDL 3.4 and a recent distro. Without
 # it, the setup offers that build or the official AppImage.
 #
 # Nothing is written outside your home folder.
