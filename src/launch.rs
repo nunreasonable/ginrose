@@ -9,9 +9,11 @@ use crate::config::Config;
 use crate::{flags, integrity, machine, paths, roblox, settings};
 
 /// Process ids of the Rosemary processes running a build Ginrose installed,
-/// with the build each runs.
+/// with the build each runs. Roblox starts its helpers by their guest path,
+/// which reaches the host's files under `/Volumes/Host`.
 fn ours() -> Vec<(i32, String)> {
-    let versions = paths::versions_dir().to_string_lossy().into_owned();
+    let host = paths::versions_dir().to_string_lossy().into_owned();
+    let guest = format!("/Volumes/Host{host}");
     let Ok(entries) = std::fs::read_dir("/proc") else {
         return Vec::new();
     };
@@ -25,7 +27,10 @@ fn ours() -> Vec<(i32, String)> {
                 .map(|a| String::from_utf8_lossy(a).into_owned())
                 .collect();
             let build = args.iter().find_map(|a| {
-                let rest = a.strip_prefix(&versions)?.trim_start_matches('/');
+                let rest = a
+                    .strip_prefix(&guest)
+                    .or_else(|| a.strip_prefix(&host))?
+                    .trim_start_matches('/');
                 Some(rest.split('/').next()?.to_string())
             })?;
             Some((pid, build))
