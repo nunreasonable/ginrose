@@ -62,9 +62,11 @@ copy and paste, plus fixes that are not in a release yet: one
 [keeps the mouse cursor in sync](https://github.com/microlift/rosemary/pull/165)
 after switching windows, and two let Roblox start again while an earlier copy
 is closing ([#189](https://github.com/microlift/rosemary/pull/189),
-[#190](https://github.com/microlift/rosemary/pull/190)). It also has early
-CoreMedia and VideoToolbox support, so experiences that play video no longer
-crash; the video itself does not show yet. The setup downloads Roblox on the first run.
+[#190](https://github.com/microlift/rosemary/pull/190)). It also plays video
+in experiences: H.264 is decoded on the GPU (Vulkan, VA-API or CUDA) and the
+AAC sound on the CPU, both through FFmpeg 8, which the Flatpak gets from the
+runtime's codecs extension. Without a usable FFmpeg, video stays blank instead
+of crashing. The setup downloads Roblox on the first run.
 
 To have it open the Play buttons on roblox.com when another app already does,
 run once:
