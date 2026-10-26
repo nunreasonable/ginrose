@@ -114,4 +114,38 @@ ginrose status          what is installed and what would get in the way
 - The BloxstrapRPC message format comes from
   [Bloxstrap](https://github.com/bloxstraplabs/bloxstrap).
 
-Ginrose is not affiliated with Roblox Corporation. Ginrose is proprietary software; see [LICENSE](LICENSE). Rosemary is GPL-3.0.
+## License
+
+Ginrose is free software under the GNU General Public License, version 3 or
+later; see [COPYRIGHT](COPYRIGHT) and [LICENSE](LICENSE). Rosemary is GPL-3.0
+as well.
+
+The name "Ginrose", its logo and its application ID are not covered by that
+license: a modified version has to go by its own name. See
+[TRADEMARKS.md](TRADEMARKS.md).
+
+### Official builds
+
+Official builds come only from
+[ginrose-flatpak](https://github.com/nunreasonable/ginrose-flatpak) (and
+Flathub, once it is there). They refuse to start a modified Roblox client. A
+build from somewhere else, or a fork that drops that check, is not Ginrose,
+whatever it calls itself.
+
+Each release can be checked against this source: see
+[Verifying a release](#verifying-a-release).
+
+Ginrose is not affiliated with or endorsed by Roblox Corporation.
+
+### Verifying a release
+
+Releases are built reproducibly: the toolchain is pinned in
+`rust-toolchain.toml`, and builds drop machine-specific paths. To check that a
+release's binary really comes from this source, rebuild its tag and compare:
+
+```sh
+tools/verify-release.sh 0.2.6
+```
+
+It downloads the release, checks it against `SHA256SUMS`, builds tag `v0.2.6`,
+and compares the two `ginrose` binaries.

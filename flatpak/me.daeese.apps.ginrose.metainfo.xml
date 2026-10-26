@@ -4,7 +4,7 @@
   <name>Ginrose</name>
   <summary>Run the official macOS Roblox client on Linux</summary>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>LicenseRef-proprietary</project_license>
+  <project_license>GPL-3.0-or-later</project_license>
   <developer id="me.daeese">
     <name>nunreasonable</name>
   </developer>

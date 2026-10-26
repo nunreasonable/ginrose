@@ -24,7 +24,11 @@ version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
 build=target/flatpak/build
 repo=target/flatpak/repo
 stage=target/flatpak/stage/ginrose-$version
-cargo build --release
+# Reproducible: the same commit and toolchain give the same binary wherever it
+# is built, so a release can be checked against its source.
+export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct)}"
+export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$PWD=/ginrose --remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/cargo"
+cargo build --release --locked
 
 rm -rf "$stage"
 install -Dm755 target/release/ginrose "$stage/ginrose"

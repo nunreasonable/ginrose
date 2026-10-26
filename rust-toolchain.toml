@@ -1,0 +1,4 @@
+# The toolchain releases are built with, so a rebuild of a tagged commit gives
+# the same binary (see tools/verify-release.sh).
+[toolchain]
+channel = "1.97.1"
