@@ -1,6 +1,7 @@
 #!/bin/sh
 # Check that an official release was built from this source: rebuild the
-# tagged commit and compare its binary with the one in the release.
+# tagged commit and compare its binary with the one in the release, and Ginrose
+# Studio's too when the release has it (0.3.0 onwards).
 #
 #   tools/verify-release.sh 0.2.6
 #
@@ -30,11 +31,24 @@ echo ":: Building v$version"
     cargo build --release --locked --quiet
 )
 
-official=$(sha256sum < "$tmp/ginrose-$version/ginrose" | cut -d' ' -f1)
-rebuilt=$(sha256sum < "$tmp/src/target/release/ginrose" | cut -d' ' -f1)
-echo "official: $official"
-echo "rebuilt:  $rebuilt"
-if [ "$official" = "$rebuilt" ]; then
+compare() {
+    official=$(sha256sum < "$1" | cut -d' ' -f1)
+    rebuilt=$(sha256sum < "$2" | cut -d' ' -f1)
+    echo "$3 official: $official"
+    echo "$3 rebuilt:  $rebuilt"
+    [ "$official" = "$rebuilt" ]
+}
+same=1
+compare "$tmp/ginrose-$version/ginrose" "$tmp/src/target/release/ginrose" ginrose || same=0
+studio="ginrose-studio-$version-x86_64.tar.gz"
+if grep -q " $studio\$" "$tmp/SHA256SUMS"; then
+    curl -fsSL -o "$tmp/$studio" "$release/$studio"
+    (cd "$tmp" && grep " $studio\$" SHA256SUMS | sha256sum -c --quiet -)
+    tar -xzf "$tmp/$studio" -C "$tmp"
+    compare "$tmp/ginrose-studio-$version/ginrose-studio" \
+        "$tmp/src/target/release/ginrose-studio" ginrose-studio || same=0
+fi
+if [ "$same" = 1 ]; then
     echo ":: The release matches its source."
 else
     echo "!! They differ: the release was not built from this tag, or the build is not reproducible here." >&2

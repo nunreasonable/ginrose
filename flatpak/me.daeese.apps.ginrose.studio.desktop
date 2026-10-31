@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ginrose Studio
+Comment=Roblox Studio launcher and settings
+Exec=ginrose-studio
+Icon=me.daeese.apps.ginrose.studio
+Categories=Development;
+StartupWMClass=me.daeese.apps.ginrose.studio

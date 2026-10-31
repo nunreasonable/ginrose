@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>me.daeese.apps.ginrose.studio</id>
+  <name>Ginrose Studio</name>
+  <summary>Run the official macOS Roblox Studio on Linux</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="me.daeese">
+    <name>nunreasonable</name>
+  </developer>
+  <description>
+    <p>
+      Ginrose Studio runs the official macOS Roblox Studio on Linux through
+      Rosemary, a macOS compatibility layer. It downloads Studio straight from
+      Roblox, keeps it up to date, opens "Edit in Studio" links from the
+      website and brings Studio's browser login back to it.
+    </p>
+    <p>
+      What runs is up to you: any Rosemary build, any FastFlag, any
+      environment variable and extra launch arguments. Repairing Studio and
+      the prefix is one click away when something goes wrong.
+    </p>
+  </description>
+  <launchable type="desktop-id">me.daeese.apps.ginrose.studio.desktop</launchable>
+  <url type="homepage">https://apps.daeese.me/ginrose</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.3.0" date="2026-10-31"/>
+  </releases>
+</component>
