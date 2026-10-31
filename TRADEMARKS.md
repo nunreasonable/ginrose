@@ -6,6 +6,10 @@ do with them.
 
 They cover the name "Ginrose", the logo and wordmarks in `assets/`, and the
 application ID `me.daeese.apps.ginrose` (and `me.daeese.apps.ginrose.player`).
+They cover Ginrose Studio the same way: the name "Ginrose Studio", its logo,
+icons and wordmark in `assets/` (`ginrose-studio*.png`, `studio-icons/`), and
+the application ID `me.daeese.apps.ginrose.studio` (and
+`me.daeese.apps.ginrose.studio.editor`). Below, "Ginrose" means either.
 
 ## Fine without asking
 
@@ -29,9 +33,14 @@ In particular, nothing may be called Ginrose, use its logo or reuse its
 application ID if it:
 
 - turns off or works around the check that Roblox runs exactly as Roblox
-  signed it;
+  signed it (Ginrose Studio has no such check; that is how it is made, and
+  does not make a changed Ginrose acceptable);
 - loads code into Roblox, or is made or advertised for cheating or exploiting;
 - passes itself off as an official build.
+
+Ginrose Studio lets its user load what they like into Roblox Studio on their
+own machine. A build or fork made or advertised to do that for cheating or
+exploiting is still covered by the second point.
 
 ## Asking
 

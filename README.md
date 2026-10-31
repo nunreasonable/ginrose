@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<p align="center">A Roblox launcher for Linux, built around <a href="https://github.com/microlift/rosemary">Rosemary</a>.</p>
+<p align="center">A Roblox launcher for Linux, built around <a href="https://github.com/microlift/rosemary">Rosemary</a>, and <a href="#ginrose-studio">Ginrose Studio</a>, the same for Roblox Studio.</p>
 
 > [!WARNING]
 > ## This is a personal project
@@ -56,17 +56,16 @@ flatpak install flathub me.daeese.apps.ginrose
 ```
 
 The Flatpak comes with Ginrose's build of
-[Rosemary 0.4.1](https://github.com/microlift/rosemary/releases/tag/v0.4.1),
+[Rosemary 0.5.0](https://github.com/microlift/rosemary/releases/tag/v0.5.0),
 which has microphone input for voice chat and lets Ctrl stand in for Command in
 copy and paste, plus fixes that are not in a release yet: one
 [keeps the mouse cursor in sync](https://github.com/microlift/rosemary/pull/165)
-after switching windows, and two let Roblox start again while an earlier copy
-is closing ([#189](https://github.com/microlift/rosemary/pull/189),
-[#190](https://github.com/microlift/rosemary/pull/190)). It also plays video
-in experiences: H.264 is decoded on the GPU (Vulkan, VA-API or CUDA) and the
-AAC sound on the CPU, both through FFmpeg 8, which the Flatpak gets from the
-runtime's codecs extension. Without a usable FFmpeg, video stays blank instead
-of crashing. The setup downloads Roblox on the first run.
+after switching windows, and others let drag and drop work between an app's
+own windows and keep an idle app from polling its run loop every 2 ms. It also
+plays video in experiences: H.264 is decoded on the GPU (Vulkan, VA-API or
+CUDA) and the AAC sound on the CPU, both through FFmpeg 8, which the Flatpak
+gets from the runtime's codecs extension. Without a usable FFmpeg, video stays
+blank instead of crashing. The setup downloads Roblox on the first run.
 
 To have it open the Play buttons on roblox.com when another app already does,
 run once:
@@ -79,6 +78,7 @@ xdg-mime default me.daeese.apps.ginrose.player.desktop x-scheme-handler/roblox-p
 
 ```sh
 tools/flatpak.sh path/to/rosemary --install
+tools/flatpak.sh --studio path/to/rosemary --install    # Ginrose Studio
 ```
 
 ### Native build
@@ -87,6 +87,7 @@ For the author's machine only, with Rust installed:
 
 ```sh
 ./install.sh --source
+./install.sh --source --studio    # Ginrose Studio
 ```
 
 ## Discord
@@ -105,6 +106,62 @@ ginrose rosemary PATH   use a Rosemary binary you built
 ginrose status          what is installed and what would get in the way
 ```
 
+## Ginrose Studio
+
+<p align="center">
+  <img alt="Ginrose Studio" src="assets/ginrose-studio-wordmark.png" width="200">
+</p>
+
+Ginrose Studio runs the official macOS Roblox Studio through Rosemary, the way
+Ginrose runs the player. It is built from the same code, as a second program,
+`ginrose-studio`, with its own app ID (`me.daeese.apps.ginrose.studio`), its
+own folders (`~/.config/ginrose-studio`, `~/.local/share/ginrose-studio` and
+so on) and its own Rosemary prefix. Nothing is shared with Ginrose.
+
+It differs from Ginrose where an editor needs it to:
+
+- **No checks on what runs.** Studio is not checked against Roblox's
+  signature before it starts, and neither is the prefix. If something breaks,
+  **Repair** (or `ginrose-studio repair`) downloads Studio again and puts the
+  prefix's system files back.
+- **Any FastFlag**, typed as `Name=Value` or pasted as a JSON list, written as
+  given into `ClientAppSettings.json` in Studio's bundle, which Studio reads
+  as it starts.
+- **Any environment variable**, `ROSEMARY_*`, `DYLD_*` and Vulkan layers
+  included, set after Ginrose Studio's own so yours win.
+- **Any Rosemary**, even in the Flatpak (it has to run inside it), and extra
+  arguments for Studio.
+- **Links from the website**: "Edit in Studio" (`roblox-studio:`) starts a
+  Studio for that place, as the helper inside Studio does on a Mac, and the
+  browser login (`roblox-studio-auth:`) goes back to the Studio that asked
+  for it. Studio's browser login needs Ginrose Studio to be the program that
+  opens these links.
+- Buttons to open Studio's **plugins folder** and the prefix's **Documents**.
+- One instance: a second `ginrose-studio` passes what it was given to the
+  first, which is what lets a login link reach the running Studio.
+- No Discord status, frame cap or per-game profiles; those are for playing.
+
+The Flatpak (`me.daeese.apps.ginrose.studio`) has Ginrose's permissions,
+without Discord's socket and with your home folder, so Studio can open and
+save places, plugins and Rojo projects wherever you keep them. To have it open
+Studio's links when another app already does:
+
+```sh
+xdg-mime default me.daeese.apps.ginrose.studio.editor.desktop x-scheme-handler/roblox-studio x-scheme-handler/roblox-studio-auth
+```
+
+```
+ginrose-studio                  the launcher (the setup on the first run)
+ginrose-studio setup            run the setup again
+ginrose-studio launch [link]    start Studio, opening a roblox-studio: link,
+                                a roblox-studio-auth: login or a place file
+ginrose-studio update           download the current Roblox Studio
+ginrose-studio repair           download Studio again and repair the prefix
+ginrose-studio rosemary PATH    use a Rosemary binary you built
+ginrose-studio install-desktop  menu entries (--default: also Studio's links)
+ginrose-studio status           what is installed, where, and what is running
+```
+
 ## Credits
 
 - [Rosemary](https://github.com/microlift/rosemary) does the hard part:
@@ -120,17 +177,18 @@ Ginrose is free software under the GNU General Public License, version 3 or
 later; see [COPYRIGHT](COPYRIGHT) and [LICENSE](LICENSE). Rosemary is GPL-3.0
 as well.
 
-The name "Ginrose", its logo and its application ID are not covered by that
-license: a modified version has to go by its own name. See
-[TRADEMARKS.md](TRADEMARKS.md).
+The names "Ginrose" and "Ginrose Studio", their logos and their application
+IDs are not covered by that license: a modified version has to go by its own
+name. See [TRADEMARKS.md](TRADEMARKS.md).
 
 ### Official builds
 
 Official builds come only from
 [ginrose-flatpak](https://github.com/nunreasonable/ginrose-flatpak) (and
-Flathub, once it is there). They refuse to start a modified Roblox client. A
-build from somewhere else, or a fork that drops that check, is not Ginrose,
-whatever it calls itself.
+Flathub, once it is there). Ginrose's refuse to start a modified Roblox client.
+A build from somewhere else, or a fork that drops that check, is not Ginrose,
+whatever it calls itself. Ginrose Studio has no such check by design; an
+official build of it is still only one from those places.
 
 Each release can be checked against this source: see
 [Verifying a release](#verifying-a-release).
