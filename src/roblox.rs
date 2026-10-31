@@ -1,25 +1,75 @@
-//! The macOS Roblox client, exactly as Roblox's CDN serves it. Nothing in the
-//! bundle is changed except `ClientSettings/ClientAppSettings.json`, the file
-//! Roblox reads local flags from.
+//! The macOS Roblox client, or Roblox Studio, exactly as Roblox's CDN serves
+//! it. Nothing in the bundle is changed except
+//! `ClientSettings/ClientAppSettings.json`, the file Roblox reads local flags
+//! from.
 
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::flavor::{self, Flavor};
 use crate::paths;
 
-const VERSION_URLS: &[&str] = &[
-    "https://clientsettingscdn.roblox.com/v2/client-version/MacPlayer",
-    "https://clientsettings.roblox.com/v2/client-version/MacPlayer",
-];
 const CDN: &[&str] = &[
     "https://setup.rbxcdn.com",
     "https://setup-aws.rbxcdn.com",
     "https://setup-ak.rbxcdn.com",
 ];
-const BUNDLE_IN_ZIP: &str = "RobloxPlayer.app";
 pub const USER_AGENT: &str = concat!("Ginrose/", env!("CARGO_PKG_VERSION"));
+
+/// Where a flavor's client comes from and how its download is laid out.
+pub struct Layout {
+    /// The channel Roblox's version service names it by.
+    pub channel: &'static str,
+    /// What follows the upload in the zip's name.
+    pub zip: &'static str,
+    /// The bundle at the top of the zip.
+    pub bundle_in_zip: &'static str,
+    /// What the bundle is called once installed.
+    pub app: &'static str,
+    /// The bundle's main executable, in `Contents/MacOS`.
+    pub executable: &'static str,
+}
+
+pub fn layout_for(flavor: Flavor) -> Layout {
+    match flavor {
+        Flavor::Player => Layout {
+            channel: "MacPlayer",
+            zip: "RobloxPlayer.zip",
+            bundle_in_zip: "RobloxPlayer.app",
+            app: "Roblox.app",
+            executable: "RobloxPlayer",
+        },
+        // Studio keeps its own name: the protocol helper inside it finds the
+        // app it belongs to by that.
+        Flavor::Studio => Layout {
+            channel: "MacStudio",
+            zip: "RobloxStudioApp.zip",
+            bundle_in_zip: "RobloxStudio.app",
+            app: "RobloxStudio.app",
+            executable: "RobloxStudio",
+        },
+    }
+}
+
+fn layout() -> Layout {
+    layout_for(flavor::current())
+}
+
+/// Roblox's version service for a flavor, then its fallback.
+pub fn version_urls_for(flavor: Flavor) -> [String; 2] {
+    let channel = layout_for(flavor).channel;
+    [
+        format!("https://clientsettingscdn.roblox.com/v2/client-version/{channel}"),
+        format!("https://clientsettings.roblox.com/v2/client-version/{channel}"),
+    ]
+}
+
+/// Where a build's zip is on one of the CDN's hosts.
+pub fn download_url_for(flavor: Flavor, host: &str, upload: &str) -> String {
+    format!("{host}/mac/{upload}-{}", layout_for(flavor).zip)
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Build {
@@ -35,11 +85,14 @@ impl Build {
     }
 
     pub fn app(&self) -> PathBuf {
-        self.directory().join("Roblox.app")
+        self.directory().join(layout().app)
     }
 
     pub fn is_installed(&self) -> bool {
-        self.app().join("Contents/MacOS/RobloxPlayer").is_file()
+        self.app()
+            .join("Contents/MacOS")
+            .join(layout().executable)
+            .is_file()
     }
 }
 
@@ -58,11 +111,27 @@ pub fn agent() -> ureq::Agent {
         .into()
 }
 
+/// For Studio's download, about 600 MB: a time limit on the whole request
+/// would cut it off on an ordinary connection, so only connecting and the
+/// answer starting are timed.
+fn download_agent() -> ureq::Agent {
+    if !flavor::is_studio() {
+        return agent();
+    }
+    let limit = Some(std::time::Duration::from_secs(30));
+    ureq::Agent::config_builder()
+        .timeout_connect(limit)
+        .timeout_recv_response(limit)
+        .user_agent(USER_AGENT)
+        .build()
+        .into()
+}
+
 pub fn latest() -> Result<Build, String> {
     let agent = agent();
     let mut failures = Vec::new();
-    for url in VERSION_URLS {
-        match agent.get(*url).call() {
+    for url in version_urls_for(flavor::current()) {
+        match agent.get(&url).call() {
             Ok(mut response) => match response.body_mut().read_json::<VersionAnswer>() {
                 Ok(answer) => {
                     return Ok(Build {
@@ -76,7 +145,11 @@ pub fn latest() -> Result<Build, String> {
         }
     }
     Err(format!(
-        "could not ask Roblox for the current version ({})",
+        "could not ask Roblox for the current version{} ({})",
+        match flavor::current() {
+            Flavor::Player => "",
+            Flavor::Studio => " of Roblox Studio",
+        },
         failures.join("; ")
     ))
 }
@@ -84,6 +157,29 @@ pub fn latest() -> Result<Build, String> {
 pub fn installed() -> Option<Build> {
     let bytes = std::fs::read(paths::installed_file()).ok()?;
     let build: Build = serde_json::from_slice(&bytes).ok()?;
+    build.is_installed().then_some(build)
+}
+
+/// A build still in the versions folder under `upload`, though maybe no
+/// longer the current one: a running Studio keeps using the one it started
+/// from.
+pub fn installed_upload(upload: &str) -> Option<Build> {
+    if let Some(build) = installed().filter(|b| b.upload == upload) {
+        return Some(build);
+    }
+    let mut build = Build {
+        version: upload.to_string(),
+        upload: upload.to_string(),
+    };
+    let info = build.app().join("Contents/Info.plist");
+    if let Some(version) = plist::Value::from_file(info).ok().and_then(|info| {
+        info.as_dictionary()?
+            .get("CFBundleShortVersionString")?
+            .as_string()
+            .map(str::to_string)
+    }) {
+        build.version = version;
+    }
     build.is_installed().then_some(build)
 }
 
@@ -99,12 +195,13 @@ pub type Progress<'a> = &'a dyn Fn(&str, Option<f64>);
 fn download(build: &Build, progress: Progress) -> Result<PathBuf, String> {
     let dir = paths::cache_dir().join("downloads");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let target = dir.join(format!("{}-RobloxPlayer.zip", build.upload));
+    let flavor = flavor::current();
+    let target = dir.join(format!("{}-{}", build.upload, layout().zip));
     let partial = target.with_extension("zip.part");
-    let agent = agent();
+    let agent = download_agent();
     let mut last = String::new();
     for host in CDN {
-        let url = format!("{host}/mac/{}-RobloxPlayer.zip", build.upload);
+        let url = download_url_for(flavor, host, &build.upload);
         let mut response = match agent.get(&url).call() {
             Ok(response) => response,
             Err(e) => {
@@ -131,7 +228,12 @@ fn download(build: &Build, progress: Progress) -> Result<PathBuf, String> {
                     done += n as u64;
                     let fraction = total.map(|t| done as f64 / t as f64);
                     progress(
-                        &format!("Downloading Roblox {} ({} MB)", build.version, done >> 20),
+                        &format!(
+                            "Downloading {} {} ({} MB)",
+                            flavor.client(),
+                            build.version,
+                            done >> 20
+                        ),
                         fraction,
                     );
                 }
@@ -148,7 +250,7 @@ fn download(build: &Build, progress: Progress) -> Result<PathBuf, String> {
         }
     }
     let _ = std::fs::remove_file(&partial);
-    Err(format!("could not download Roblox ({last})"))
+    Err(format!("could not download {} ({last})", flavor.client()))
 }
 
 /// Unpack the zip into a staging folder beside the final one and move it into
@@ -200,15 +302,25 @@ fn unpack(zip_path: &Path, build: &Build, progress: Progress) -> Result<(), Stri
             std::fs::set_permissions(&out, permissions).map_err(|e| e.to_string())?;
         }
         if index % 64 == 0 {
-            progress("Unpacking Roblox", Some(index as f64 / count as f64));
+            progress(
+                &format!("Unpacking {}", flavor::current().client()),
+                Some(index as f64 / count as f64),
+            );
         }
     }
-    let unpacked = staging.join(BUNDLE_IN_ZIP);
-    if !unpacked.join("Contents/MacOS/RobloxPlayer").is_file() {
+    let layout = layout();
+    let unpacked = staging.join(layout.bundle_in_zip);
+    if !unpacked
+        .join("Contents/MacOS")
+        .join(layout.executable)
+        .is_file()
+    {
         let _ = std::fs::remove_dir_all(&staging);
-        return Err("the download has no RobloxPlayer in it".into());
+        return Err(format!("the download has no {} in it", layout.executable));
     }
-    std::fs::rename(&unpacked, staging.join("Roblox.app")).map_err(|e| e.to_string())?;
+    if layout.bundle_in_zip != layout.app {
+        std::fs::rename(&unpacked, staging.join(layout.app)).map_err(|e| e.to_string())?;
+    }
     let _ = std::fs::remove_dir_all(build.directory());
     std::fs::rename(&staging, build.directory()).map_err(|e| e.to_string())?;
     Ok(())
@@ -221,7 +333,10 @@ pub fn ensure(check: bool, progress: Progress) -> Result<Build, String> {
     if !check && let Some(build) = current {
         return Ok(build);
     }
-    progress("Checking for Roblox updates", None);
+    progress(
+        &format!("Checking for {} updates", flavor::current().client()),
+        None,
+    );
     let latest = match latest() {
         Ok(latest) => latest,
         Err(e) => return current.ok_or(e),
@@ -306,5 +421,38 @@ mod tests {
             Some(9651695668)
         );
         assert_eq!(place_from_uri("roblox-player:1+launchmode:app"), None);
+    }
+
+    #[test]
+    fn each_flavor_downloads_its_own_client() {
+        assert_eq!(
+            version_urls_for(Flavor::Player)[0],
+            "https://clientsettingscdn.roblox.com/v2/client-version/MacPlayer"
+        );
+        assert_eq!(
+            version_urls_for(Flavor::Studio),
+            [
+                "https://clientsettingscdn.roblox.com/v2/client-version/MacStudio",
+                "https://clientsettings.roblox.com/v2/client-version/MacStudio",
+            ]
+        );
+        assert_eq!(
+            download_url_for(Flavor::Player, CDN[0], "version-212bac6bdccd4673"),
+            "https://setup.rbxcdn.com/mac/version-212bac6bdccd4673-RobloxPlayer.zip"
+        );
+        assert_eq!(
+            download_url_for(Flavor::Studio, CDN[0], "version-a7baca1cb08a4943"),
+            "https://setup.rbxcdn.com/mac/version-a7baca1cb08a4943-RobloxStudioApp.zip"
+        );
+        let player = layout_for(Flavor::Player);
+        assert_eq!(
+            (player.app, player.executable),
+            ("Roblox.app", "RobloxPlayer")
+        );
+        let studio = layout_for(Flavor::Studio);
+        assert_eq!(
+            (studio.bundle_in_zip, studio.app, studio.executable),
+            ("RobloxStudio.app", "RobloxStudio.app", "RobloxStudio")
+        );
     }
 }

@@ -4,13 +4,15 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::flavor::{self, Flavor};
 use crate::paths;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     /// The Rosemary binary to run Roblox with. Empty means the bundled one,
-    /// then `rosemary` on PATH.
+    /// then `rosemary` on PATH. Ginrose's Flatpak ignores it; Ginrose
+    /// Studio's uses it.
     pub rosemary: String,
     /// The frame cap written into Roblox's settings before each launch. Zero
     /// leaves Roblox's own setting alone; 9999 is uncapped.
@@ -31,17 +33,30 @@ pub struct Config {
     pub pause_wallpaper: bool,
     pub auto_update: bool,
     pub discord: Discord,
-    /// FastFlags from Roblox's allowlist, by name.
+    /// FastFlags by name: Roblox's allowlist only for Ginrose, any for
+    /// Ginrose Studio.
     pub flags: BTreeMap<String, Value>,
     pub profiles: Vec<Profile>,
     pub extra_env: BTreeMap<String, String>,
+    /// Ginrose Studio's extra arguments for Studio, after the app.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub launch_args: Vec<String>,
     /// The first-run setup has been through to the end.
     pub setup_done: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Config {
+        Config::defaults_for(flavor::current())
+    }
+}
+
+impl Config {
+    /// Ginrose's defaults are a game's: uncapped frames, no VSync, GameMode.
+    /// Studio is an editor that stays open for hours, so it keeps VSync and
+    /// Rosemary's own presentation, and starts without GameMode.
+    pub fn defaults_for(flavor: Flavor) -> Config {
+        let player = Config {
             rosemary: String::new(),
             frame_cap: 9999,
             quality: 0,
@@ -57,7 +72,23 @@ impl Default for Config {
             flags: BTreeMap::new(),
             profiles: Vec::new(),
             extra_env: BTreeMap::new(),
+            launch_args: Vec::new(),
             setup_done: false,
+        };
+        match flavor {
+            Flavor::Player => player,
+            Flavor::Studio => Config {
+                frame_cap: 0,
+                vsync: true,
+                presentation: String::new(),
+                gamemode: false,
+                pause_wallpaper: false,
+                discord: Discord {
+                    enabled: false,
+                    ..Discord::default()
+                },
+                ..player
+            },
         }
     }
 }
@@ -167,6 +198,9 @@ impl Config {
     }
 
     pub fn rosemary_path(&self) -> Option<PathBuf> {
+        if flavor::is_studio() {
+            return self.studio_rosemary();
+        }
         if paths::in_flatpak() {
             let path = PathBuf::from(paths::FLATPAK_ROSEMARY);
             return path.is_file().then_some(path);
@@ -184,6 +218,28 @@ impl Config {
                 .map(|dir| dir.join("rosemary"))
                 .find(|candidate| candidate.is_file())
         })
+    }
+}
+
+impl Config {
+    /// Ginrose Studio runs any Rosemary it is pointed at, even from inside the
+    /// Flatpak: the one chosen, then one copied into it, then the Flatpak's
+    /// own, then PATH's.
+    fn studio_rosemary(&self) -> Option<PathBuf> {
+        if !self.rosemary.is_empty() {
+            let path = PathBuf::from(&self.rosemary);
+            return path.is_file().then_some(path);
+        }
+        let flatpak = paths::in_flatpak().then(|| PathBuf::from(paths::FLATPAK_ROSEMARY));
+        [Some(paths::bundled_rosemary()), flatpak]
+            .into_iter()
+            .flatten()
+            .find(|path| path.is_file())
+            .or_else(|| {
+                std::env::split_paths(&std::env::var_os("PATH")?)
+                    .map(|dir| dir.join("rosemary"))
+                    .find(|candidate| candidate.is_file())
+            })
     }
 }
 
@@ -229,5 +285,24 @@ mod tests {
         );
         assert!(!game.flags.contains_key("FIntFRMMaxGrassDistance"));
         assert_eq!(game.profile.as_deref(), Some("Test"));
+    }
+
+    #[test]
+    fn the_player_defaults_and_file_stay_as_they_were() {
+        let player = Config::default();
+        assert_eq!(player.frame_cap, 9999);
+        assert!(!player.vsync && player.gamemode && player.discord.enabled);
+        assert_eq!(player.presentation, "mailbox");
+        let saved = serde_json::to_value(&player).unwrap();
+        assert!(saved.get("launch_args").is_none());
+    }
+
+    #[test]
+    fn studio_defaults_suit_an_editor() {
+        let studio = Config::defaults_for(Flavor::Studio);
+        assert!(studio.vsync && !studio.gamemode && !studio.discord.enabled);
+        assert_eq!(studio.frame_cap, 0);
+        assert!(studio.presentation.is_empty());
+        assert!(studio.control_edit_keys && studio.auto_update);
     }
 }

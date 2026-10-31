@@ -1,5 +1,6 @@
 //! The first-run setup: Rosemary, Roblox, Discord and the desktop, one page
-//! each, then the launcher.
+//! each, then the launcher. Ginrose Studio's has the same pages for Roblox
+//! Studio, without Discord.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -10,15 +11,36 @@ use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 
 use crate::config::Config;
-use crate::{desktop, roblox, rosemary};
+use crate::{desktop, flavor, paths, roblox, rosemary};
 
 const LOGO: &[u8] = include_bytes!("../assets/icons/256.png");
+const STUDIO_LOGO: &[u8] = include_bytes!("../assets/studio-icons/256.png");
+const STUDIO_WORDMARK: &[u8] = include_bytes!("../assets/ginrose-studio-wordmark.png");
+
+fn image(bytes: &'static [u8]) -> gtk::Image {
+    let texture = gdk::Texture::from_bytes(&glib::Bytes::from_static(bytes)).ok();
+    gtk::Image::from_paintable(texture.as_ref())
+}
 
 pub fn logo(size: i32) -> gtk::Image {
-    let texture = gdk::Texture::from_bytes(&glib::Bytes::from_static(LOGO)).ok();
-    let image = gtk::Image::from_paintable(texture.as_ref());
+    let image = image(match flavor::is_studio() {
+        true => STUDIO_LOGO,
+        false => LOGO,
+    });
     image.set_pixel_size(size);
     image
+}
+
+/// Ginrose Studio's mark with "STUDIO" under it, for its welcome page.
+pub fn studio_wordmark(height: i32) -> gtk::Picture {
+    let picture = match gdk::Texture::from_bytes(&glib::Bytes::from_static(STUDIO_WORDMARK)) {
+        Ok(texture) => gtk::Picture::for_paintable(&texture),
+        Err(_) => gtk::Picture::new(),
+    };
+    picture.set_can_shrink(true);
+    picture.set_content_fit(gtk::ContentFit::Contain);
+    picture.set_size_request(-1, height);
+    picture
 }
 
 fn page(title: &str, text: &str) -> (gtk::Box, gtk::Box) {
@@ -45,7 +67,7 @@ fn page(title: &str, text: &str) -> (gtk::Box, gtk::Box) {
 
 /// Run `work` on a thread, showing its progress in `bar` and `line`, and call
 /// `done` with its result on the main loop.
-fn in_background<T: Send + 'static>(
+pub fn in_background<T: Send + 'static>(
     bar: &gtk::ProgressBar,
     line: &gtk::Label,
     work: impl FnOnce(&dyn Fn(&str, Option<f64>)) -> Result<T, String> + Send + 'static,
@@ -95,20 +117,42 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     let stack = gtk::Stack::new();
     stack.set_transition_type(gtk::StackTransitionType::SlideLeftRight);
 
+    let studio = flavor::is_studio();
+    let flatpak = paths::in_flatpak();
+
     // Welcome.
-    let (welcome, inner) = page(
-        "Welcome to Ginrose",
-        "Ginrose runs the official macOS Roblox client on Linux through Rosemary, keeps it up to date and shows your games on Discord. The client itself is never modified.",
-    );
-    welcome.prepend(&logo(128));
+    let (welcome, inner) = match studio {
+        false => page(
+            "Welcome to Ginrose",
+            "Ginrose runs the official macOS Roblox client on Linux through Rosemary, keeps it up to date and shows your games on Discord. The client itself is never modified.",
+        ),
+        true => page(
+            "Welcome to Ginrose Studio",
+            "Ginrose Studio runs the official macOS Roblox Studio on Linux through Rosemary and keeps it up to date. What runs and how is up to you: any Rosemary, any FastFlag, any environment variable.",
+        ),
+    };
+    match studio {
+        false => welcome.prepend(&logo(128)),
+        true => welcome.prepend(&studio_wordmark(180)),
+    }
     let _ = inner;
     stack.add_named(&welcome, Some("welcome"));
 
     // Rosemary.
-    let (rosemary_page, inner) = page(
-        "Rosemary",
-        "Rosemary is what runs macOS programs on Linux. Use one you have, or download one. Both have voice chat and Ctrl for copy and paste. Ginrose's build also keeps the cursor in sync after switching windows, but needs SDL 3.4 and a recent distro; the official one runs anywhere.",
-    );
+    let (rosemary_page, inner) = match (studio, flatpak) {
+        (false, _) => page(
+            "Rosemary",
+            "Rosemary is what runs macOS programs on Linux. Use one you have, or download one. Both have voice chat and Ctrl for copy and paste. Ginrose's build also keeps the cursor in sync after switching windows, but needs SDL 3.4 and a recent distro; the official one runs anywhere.",
+        ),
+        (true, false) => page(
+            "Rosemary",
+            "Rosemary is what runs macOS programs on Linux. Use one you have, or download one. Ginrose's build has the fixes Studio needs (drag and drop between its panels, video, a quiet idle loop) but needs SDL 3.4 and a recent distro; the official one runs anywhere.",
+        ),
+        (true, true) => page(
+            "Rosemary",
+            "Rosemary is what runs macOS programs on Linux. Ginrose Studio comes with Ginrose's build, which has the fixes Studio needs. You can choose another binary instead, here or later in Settings; it has to run inside the Flatpak.",
+        ),
+    };
     let found = gtk::Label::new(None);
     found.set_wrap(true);
     let describe_found = {
@@ -141,6 +185,12 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
         line.upcast_ref(),
     ] {
         inner.append(widget);
+    }
+    // An AppImage cannot run inside the Flatpak, and the bundled build is the
+    // one to download anyway.
+    if flatpak {
+        fetch.set_visible(false);
+        fetch_fork.set_visible(false);
     }
     {
         let config = config.clone();
@@ -200,17 +250,24 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     stack.add_named(&rosemary_page, Some("rosemary"));
 
     // Roblox.
-    let (roblox_page, inner) = page(
-        "Roblox",
-        "Ginrose downloads the macOS client straight from Roblox (about 150 MB). You can also skip this; it downloads on the first Play.",
-    );
-    let get = gtk::Button::with_label("Download Roblox now");
+    let (roblox_page, inner) = match studio {
+        false => page(
+            "Roblox",
+            "Ginrose downloads the macOS client straight from Roblox (about 150 MB). You can also skip this; it downloads on the first Play.",
+        ),
+        true => page(
+            "Roblox Studio",
+            "Ginrose Studio downloads the macOS Roblox Studio straight from Roblox (about 600 MB, 1.1 GB unpacked). You can also skip this; it downloads the first time you open Studio.",
+        ),
+    };
+    let client = flavor::current().client();
+    let get = gtk::Button::with_label(&format!("Download {client} now"));
     get.add_css_class("suggested-action");
     let bar = gtk::ProgressBar::new();
     bar.set_visible(false);
     let line = gtk::Label::new(
         roblox::installed()
-            .map(|b| format!("Roblox {} is installed", b.version))
+            .map(|b| format!("{client} {} is installed", b.version))
             .as_deref(),
     );
     line.add_css_class("dim-label");
@@ -230,7 +287,7 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
                 move |result| {
                     button.set_sensitive(true);
                     line_done.set_text(&match result {
-                        Ok(build) => format!("Roblox {} is installed", build.version),
+                        Ok(build) => format!("{client} {} is installed", build.version),
                         Err(e) => e,
                     });
                 },
@@ -254,20 +311,34 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     stack.add_named(&discord_page, Some("discord"));
 
     // Desktop.
-    let (desktop_page, inner) = page(
-        "Almost done",
-        "Ginrose adds itself to your app menu. It can also open the Play buttons on roblox.com.",
-    );
+    let (desktop_page, inner) = match studio {
+        false => page(
+            "Almost done",
+            "Ginrose adds itself to your app menu. It can also open the Play buttons on roblox.com.",
+        ),
+        true => page(
+            "Almost done",
+            "Ginrose Studio adds itself to your app menu. It can also open \"Edit in Studio\" on roblox.com, and has to for Studio's browser login to come back to it.",
+        ),
+    };
     let group = adw::PreferencesGroup::new();
     let links = adw::SwitchRow::builder()
-        .title("Open Roblox links with Ginrose")
+        .title(match studio {
+            false => "Open Roblox links with Ginrose",
+            true => "Open Studio links with Ginrose Studio",
+        })
         .subtitle("Takes them over from whatever opens them now")
         .active(true)
         .build();
     if crate::paths::in_flatpak() {
-        let hint = gtk::Label::new(Some(
-            "If another app opens the Play buttons on roblox.com, run this once in a terminal to hand them to Ginrose:",
-        ));
+        let hint = gtk::Label::new(Some(match studio {
+            false => {
+                "If another app opens the Play buttons on roblox.com, run this once in a terminal to hand them to Ginrose:"
+            }
+            true => {
+                "If another app opens Studio's links, run this once in a terminal to hand them to Ginrose Studio:"
+            }
+        }));
         hint.set_wrap(true);
         hint.set_xalign(0.0);
         let command = gtk::Label::new(Some(&desktop::host_default_command()));
@@ -283,9 +354,10 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     }
     stack.add_named(&desktop_page, Some("desktop"));
 
-    let pages: &[&str] = match crate::paths::in_flatpak() {
-        true => &["welcome", "roblox", "discord", "desktop"],
-        false => &["welcome", "rosemary", "roblox", "discord", "desktop"],
+    let pages: &[&str] = match (studio, flatpak) {
+        (true, _) => &["welcome", "rosemary", "roblox", "desktop"],
+        (false, true) => &["welcome", "roblox", "discord", "desktop"],
+        (false, false) => &["welcome", "rosemary", "roblox", "discord", "desktop"],
     };
     let index = Rc::new(Cell::new(0usize));
     let back = gtk::Button::with_label("Back");
@@ -300,7 +372,7 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     view.set_content(Some(&stack));
     let window = adw::ApplicationWindow::builder()
         .application(app)
-        .title("Set up Ginrose")
+        .title(format!("Set up {}", flavor::current().name()))
         .default_width(560)
         .default_height(560)
         .content(&view)
@@ -342,7 +414,7 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
             }
             let _ = config.borrow().save();
             if let Err(e) = desktop::install(links.is_active()) {
-                eprintln!("ginrose: {e}");
+                eprintln!("{}: {e}", flavor::current().command());
             }
             window.close();
             finished();

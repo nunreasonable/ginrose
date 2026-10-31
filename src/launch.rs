@@ -1,4 +1,9 @@
 //! Starting Roblox through Rosemary, and stopping one already running.
+//!
+//! Ginrose Studio starts Roblox Studio the same way, without the checks
+//! Ginrose makes: no signature check, no prefix check, no filtering of the
+//! user's environment. It never stops a running Studio to start another; a
+//! second launch is handed to the first, as on a Mac.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -6,7 +11,7 @@ use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
 use crate::config::Config;
-use crate::{flags, integrity, machine, paths, roblox, settings};
+use crate::{flags, flavor, integrity, machine, paths, roblox, settings, studio};
 
 /// Process ids of the Rosemary processes running a build Ginrose installed,
 /// with the build each runs. Roblox starts its helpers by their guest path,
@@ -63,6 +68,22 @@ pub fn stop_running() {
     }
 }
 
+/// Ginrose Studio's repair: close Studio, download it again and put the
+/// prefix's system files back. Nothing is checked afterwards; it is the
+/// user's to change again.
+pub fn repair(progress: roblox::Progress) -> Result<roblox::Build, String> {
+    stop_running();
+    let build = roblox::reinstall(progress)?;
+    if let Some(rosemary) = Config::load().rosemary_path()
+        && paths::prefix().join("root").is_dir()
+    {
+        progress("Putting the prefix's system files back", None);
+        integrity::repair_prefix(&rosemary)
+            .map_err(|e| format!("could not repair the prefix: {e}"))?;
+    }
+    Ok(build)
+}
+
 fn unsafe_kill(pid: i32, signal: i32) {
     let _ = Command::new("kill")
         .arg(format!("-{signal}"))
@@ -85,24 +106,18 @@ pub fn prepare(
     uri: Option<&str>,
     progress: roblox::Progress,
 ) -> Result<Prepared, String> {
-    let rosemary = config.rosemary_path().ok_or(
-        "Rosemary was not found. Set its path in Settings, or install one with `ginrose rosemary <path>`.",
-    )?;
+    let rosemary = config.rosemary_path().ok_or_else(|| {
+        format!(
+            "Rosemary was not found. Set its path in Settings, or install one with `{} rosemary <path>`.",
+            flavor::current().command()
+        )
+    })?;
     let warnings = machine::check(config, Some(&rosemary));
-    let build = roblox::ensure(config.auto_update, progress)?;
-    if !paths::prefix().join("root").is_dir() {
-        progress("Setting up the Rosemary prefix", None);
-        let status = Command::new(&rosemary)
-            .args(["prefix", "create"])
-            .arg(paths::prefix())
-            .env("ROSEMARY_PREFIX_SETUP", "download")
-            .stdin(Stdio::null())
-            .status()
-            .map_err(|e| format!("could not run Rosemary: {e}"))?;
-        if !status.success() {
-            return Err(format!("`rosemary prefix create` failed ({status})"));
-        }
+    if flavor::is_studio() {
+        return prepare_studio(config, rosemary, warnings, progress);
     }
+    let build = roblox::ensure(config.auto_update, progress)?;
+    create_prefix(&rosemary, progress)?;
     if let Some(name) = config
         .extra_env
         .keys()
@@ -127,10 +142,58 @@ pub fn prepare(
     })
 }
 
+/// Studio's preparation: the build, the prefix and the flags, as given. While
+/// a Studio runs, the launch goes to the build it runs, without updating:
+/// Rosemary hands a launch to the running instance only when it names the
+/// same app, and a new build is a different one.
+fn prepare_studio(
+    config: &Config,
+    rosemary: PathBuf,
+    warnings: Vec<machine::Warning>,
+    progress: roblox::Progress,
+) -> Result<Prepared, String> {
+    let running = running_builds()
+        .into_iter()
+        .find_map(|upload| roblox::installed_upload(&upload));
+    let build = match running {
+        Some(build) => build,
+        None => roblox::ensure(config.auto_update, progress)?,
+    };
+    create_prefix(&rosemary, progress)?;
+    flags::write_all(&build.app(), &config.flags)
+        .map_err(|e| format!("could not write the FastFlags: {e}"))?;
+    Ok(Prepared {
+        rosemary,
+        build,
+        warnings,
+        profile: None,
+    })
+}
+
+fn create_prefix(rosemary: &Path, progress: roblox::Progress) -> Result<(), String> {
+    if !paths::prefix().join("root").is_dir() {
+        progress("Setting up the Rosemary prefix", None);
+        let status = Command::new(rosemary)
+            .args(["prefix", "create"])
+            .arg(paths::prefix())
+            .env("ROSEMARY_PREFIX_SETUP", "download")
+            .stdin(Stdio::null())
+            .status()
+            .map_err(|e| format!("could not run Rosemary: {e}"))?;
+        if !status.success() {
+            return Err(format!("`rosemary prefix create` failed ({status})"));
+        }
+    }
+    Ok(())
+}
+
 fn environment(config: &Config, command: &mut Command) {
+    let studio = flavor::is_studio();
+    // Ginrose passes on nothing that could load code into Roblox; for Studio
+    // the environment it was started with is the user's to set.
     for (name, _) in std::env::vars_os() {
         let name = name.to_string_lossy();
-        if integrity::loads_code(&name) || name.starts_with("ROSEMARY_") {
+        if !studio && (integrity::loads_code(&name) || name.starts_with("ROSEMARY_")) {
             command.env_remove(name.as_ref());
         }
     }
@@ -162,9 +225,10 @@ fn environment(config: &Config, command: &mut Command) {
         command.env("MANGOHUD", "1");
     }
     if paths::in_flatpak() {
-        // Matches the Player entry the package exports, for the window's icon.
-        command.env("SDL_APP_ID", crate::desktop::player_id());
+        // Matches the client entry the package exports, for the window's icon.
+        command.env("SDL_APP_ID", flavor::current().client_id());
     }
+    // Last, so the user's own variables win over Ginrose's.
     command.envs(&config.extra_env);
 }
 
@@ -207,11 +271,20 @@ pub struct Launched {
 }
 
 pub fn spawn(config: &Config, prepared: &Prepared, uri: Option<&str>) -> Result<Launched, String> {
-    stop_running();
     let mut command = Command::new(&prepared.rosemary);
-    command.arg("run").arg(prepared.build.app());
-    if let Some(uri) = uri.filter(|u| !u.is_empty()) {
-        command.arg("-protocolString").arg(uri);
+    command.arg("run");
+    if flavor::is_studio() {
+        let (new_instance, args) = studio::arguments(&studio::target(uri), &config.launch_args);
+        if new_instance {
+            command.arg("--new-instance");
+        }
+        command.arg(prepared.build.app()).args(args);
+    } else {
+        stop_running();
+        command.arg(prepared.build.app());
+        if let Some(uri) = uri.filter(|u| !u.is_empty()) {
+            command.arg("-protocolString").arg(uri);
+        }
     }
     environment(config, &mut command);
     let (log, path) = open_log()?;
@@ -221,7 +294,7 @@ pub fn spawn(config: &Config, prepared: &Prepared, uri: Option<&str>) -> Result<
         .stderr(log);
     let child = command
         .spawn()
-        .map_err(|e| format!("could not start Roblox: {e}"))?;
+        .map_err(|e| format!("could not start {}: {e}", flavor::current().client()))?;
     if config.gamemode {
         register_with_gamemode(child.id());
     }

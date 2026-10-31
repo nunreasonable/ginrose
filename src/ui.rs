@@ -9,15 +9,15 @@ use gtk::{gio, glib};
 use serde_json::Value;
 
 use crate::config::{Config, Profile};
-use crate::{desktop, flags, launch, presence, roblox};
+use crate::{desktop, flags, flavor, launch, presence, roblox, studio};
 
-type Shared = Rc<RefCell<Config>>;
+pub type Shared = Rc<RefCell<Config>>;
 
 pub fn has_display() -> bool {
     std::env::var_os("WAYLAND_DISPLAY").is_some() || std::env::var_os("DISPLAY").is_some()
 }
 
-enum Message {
+pub enum Message {
     Progress(String, Option<f64>),
     Warning(String, String),
     Started(Option<String>),
@@ -28,8 +28,9 @@ enum Message {
 }
 
 /// Prepare and start Roblox on a thread of its own, then follow it for Discord
-/// until it closes. Everything the window needs to know arrives as messages.
-fn start(config: Config, uri: Option<String>) -> mpsc::Receiver<Message> {
+/// until it closes (Studio: until it closes). Everything the window needs to
+/// know arrives as messages.
+pub fn start(config: Config, uri: Option<String>) -> mpsc::Receiver<Message> {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
         let progress_tx = tx.clone();
@@ -62,6 +63,12 @@ fn start(config: Config, uri: Option<String>) -> mpsc::Receiver<Message> {
             launch::wait_for_window(&log, Duration::from_secs(20));
             let _ = visible_tx.send(Message::Visible);
         });
+        if flavor::is_studio() {
+            let mut child = child.child;
+            let _ = child.wait();
+            let _ = tx.send(Message::Exited);
+            return;
+        }
         let child = RefCell::new(child.child);
         presence::follow(&config.discord, &|| {
             !matches!(child.borrow_mut().try_wait(), Ok(Some(_)))
@@ -72,7 +79,7 @@ fn start(config: Config, uri: Option<String>) -> mpsc::Receiver<Message> {
 }
 
 /// Deliver a thread's messages on the main loop, until the sender is gone.
-fn receive(rx: mpsc::Receiver<Message>, mut handle: impl FnMut(Message) + 'static) {
+pub fn receive(rx: mpsc::Receiver<Message>, mut handle: impl FnMut(Message) + 'static) {
     glib::timeout_add_local(Duration::from_millis(100), move || {
         loop {
             match rx.try_recv() {
@@ -92,7 +99,7 @@ pub fn run(launch_uri: Option<String>, force_setup: bool) -> ExitCode {
     let uri = Rc::new(launch_uri);
     app.connect_startup(|_| gtk::Window::set_default_icon_name(desktop::app_id()));
     app.connect_activate(move |app| match uri.as_ref() {
-        Some(uri) => launch_window(app, uri.clone()),
+        Some(uri) => launch_window(app, uri.clone(), false),
         None if force_setup || !Config::load().setup_done => {
             let next = app.clone();
             crate::setup::window(app, move || main_window(&next));
@@ -105,12 +112,67 @@ pub fn run(launch_uri: Option<String>, force_setup: bool) -> ExitCode {
     }
 }
 
+/// Ginrose Studio is one instance per user: a second `ginrose-studio`, as a
+/// browser link starts one, passes its arguments to the first and exits.
+/// That way a login link reaches the Rosemary prefix the running Studio is
+/// in, which inside the Flatpak another sandbox would not see.
+pub fn run_studio(args: Vec<String>) -> ExitCode {
+    let app = adw::Application::builder()
+        .application_id(desktop::app_id())
+        .flags(gio::ApplicationFlags::HANDLES_COMMAND_LINE)
+        .build();
+    app.connect_startup(|_| gtk::Window::set_default_icon_name(desktop::app_id()));
+    app.connect_command_line(|app, line| {
+        let args: Vec<String> = line
+            .arguments()
+            .iter()
+            .skip(1)
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        match args.first().map(String::as_str) {
+            Some("launch") => {
+                let mut uri = args.get(1).cloned().unwrap_or_default();
+                // A file named from another folder, by a second instance.
+                if let studio::Target::Other(path) = studio::target(Some(&uri))
+                    && std::path::Path::new(path).is_relative()
+                    && let Some(cwd) = line.cwd()
+                {
+                    uri = cwd.join(path).to_string_lossy().into_owned();
+                }
+                // A login for a running Studio only hands it the link: no
+                // window unless that fails.
+                let quiet = matches!(studio::target(Some(&uri)), studio::Target::Login(_))
+                    && !launch::running_builds().is_empty();
+                launch_window(app, uri, quiet);
+            }
+            Some("setup") => {
+                let next = app.clone();
+                crate::setup::window(app, move || crate::studio_ui::main_window(&next));
+            }
+            _ if !Config::load().setup_done => {
+                let next = app.clone();
+                crate::setup::window(app, move || crate::studio_ui::main_window(&next));
+            }
+            _ => crate::studio_ui::main_window(app),
+        }
+        glib::ExitCode::SUCCESS
+    });
+    let mut argv = vec![flavor::current().command().to_string()];
+    argv.extend(args);
+    match app.run_with_args(&argv) {
+        glib::ExitCode::SUCCESS => ExitCode::SUCCESS,
+        _ => ExitCode::FAILURE,
+    }
+}
+
 /// The splash a browser link opens: the logo while Roblox gets ready, gone the
 /// moment Roblox's own window is up. Downloads show a progress bar in it. The
-/// process stays after it closes, to keep Discord up to date.
-fn launch_window(app: &adw::Application, uri: String) {
+/// process stays after it closes, to keep Discord up to date (Studio: until
+/// Studio closes). A `quiet` one only shows up if the launch fails.
+fn launch_window(app: &adw::Application, uri: String, quiet: bool) {
     let config = Config::load();
-    let label = gtk::Label::new(Some("Starting Roblox"));
+    let client = flavor::current().client();
+    let label = gtk::Label::new(Some(&format!("Starting {client}")));
     label.add_css_class("title-3");
     let spinner = adw::Spinner::new();
     spinner.set_size_request(24, 24);
@@ -133,12 +195,14 @@ fn launch_window(app: &adw::Application, uri: String) {
     content.append(&detail);
     let window = adw::ApplicationWindow::builder()
         .application(app)
-        .title("Ginrose")
+        .title(flavor::current().name())
         .default_width(340)
         .resizable(false)
         .content(&content)
         .build();
-    window.present();
+    if !quiet {
+        window.present();
+    }
     let hold = app.hold();
     let hold = Rc::new(RefCell::new(Some(hold)));
     let window_ref = window.clone();
@@ -156,11 +220,11 @@ fn launch_window(app: &adw::Application, uri: String) {
             bar.set_visible(false);
             spinner.set_visible(true);
             detail.set_text("");
-            label.set_text("Opening Roblox");
+            label.set_text(&format!("Opening {client}"));
         }
         Message::Visible => window_ref.set_visible(false),
         Message::Failed(e) => {
-            label.set_text("Roblox could not start");
+            label.set_text(&format!("{client} could not start"));
             detail.set_text(&e);
             spinner.set_visible(false);
             bar.set_visible(false);
@@ -174,7 +238,7 @@ fn launch_window(app: &adw::Application, uri: String) {
     });
 }
 
-fn save(config: &Shared) {
+pub fn save(config: &Shared) {
     let _ = config.borrow().save();
 }
 
@@ -312,7 +376,7 @@ fn play_page(config: &Shared, toasts: &adw::ToastOverlay, app: &adw::Application
     status.upcast()
 }
 
-fn switch_row(
+pub fn switch_row(
     title: &str,
     subtitle: &str,
     active: bool,
@@ -327,7 +391,7 @@ fn switch_row(
     row
 }
 
-fn combo_row(
+pub fn combo_row(
     title: &str,
     subtitle: &str,
     items: &[&str],
@@ -357,7 +421,7 @@ const QUALITIES: &[&str] = &[
     "9",
     "10",
 ];
-const PRESENTATIONS: &[&str] = &["mailbox", "immediate", "fifo", "fifo_relaxed"];
+pub const PRESENTATIONS: &[&str] = &["mailbox", "immediate", "fifo", "fifo_relaxed"];
 
 fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
     let page = adw::PreferencesPage::new();
@@ -590,7 +654,10 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
         });
     }
     if crate::paths::in_flatpak() {
-        links.set_subtitle(&format!("Run on the host: {}", desktop::host_default_command()));
+        links.set_subtitle(&format!(
+            "Run on the host: {}",
+            desktop::host_default_command()
+        ));
         links.set_subtitle_selectable(true);
     } else {
         links.add_suffix(&take);
