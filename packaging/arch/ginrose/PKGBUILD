@@ -12,7 +12,7 @@ depends=(gcc-libs glibc glib2 gtk4 libadwaita)
 makedepends=(cargo)
 options=(!lto)
 source=("$pkgbase-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('d970358a97ae50beafe21035ab070c9d2193a5958584bba06bf550398ec45cd0')
 
 # What Rosemary needs when Ginrose downloads its build instead of using the
 # rosemary package.
