@@ -1,0 +1,48 @@
+# Maintainer: nunreasonable <rafaelpasquarella@gmail.com>
+
+# The official builds from the releases, the same binaries the Flatpaks run.
+pkgbase=ginrose-bin
+pkgname=(ginrose-bin ginrose-studio-bin)
+pkgver=0.3.1
+pkgrel=1
+pkgdesc="Roblox and Roblox Studio launchers for Linux, built around Rosemary (official builds)"
+arch=(x86_64)
+url="https://github.com/nunreasonable/ginrose"
+license=(GPL-3.0-or-later)
+depends=(gcc-libs glibc glib2 gtk4 libadwaita)
+options=(!strip !debug)
+source=(
+    "https://github.com/nunreasonable/ginrose-flatpak/releases/download/v$pkgver/ginrose-$pkgver-x86_64.tar.gz"
+    "https://github.com/nunreasonable/ginrose-studio/releases/download/v$pkgver/ginrose-studio-$pkgver-x86_64.tar.gz"
+)
+sha256sums=('SKIP' 'SKIP')
+
+_rosemary_optdepends=(
+    'rosemary: use the rosemary package instead of a downloaded Rosemary'
+    'sdl3: needed by a downloaded Rosemary (3.4 or newer)'
+    'openal: sound in a downloaded Rosemary'
+    'vulkan-icd-loader: Metal in a downloaded Rosemary'
+    'xdg-utils: open Roblox links from the browser'
+)
+
+package_ginrose-bin() {
+    pkgdesc="Roblox launcher for Linux, built around Rosemary (official build)"
+    optdepends=("${_rosemary_optdepends[@]}")
+    provides=(ginrose)
+    conflicts=(ginrose)
+    cd "ginrose-$pkgver"
+    ./install-files.sh "$pkgdir"
+}
+
+package_ginrose-studio-bin() {
+    pkgdesc="Roblox Studio launcher for Linux, built around Rosemary (official build)"
+    optdepends=(
+        "${_rosemary_optdepends[@]}"
+        'webkitgtk-6.0: Roblox Studio login in a downloaded Rosemary'
+        'glib-networking: Roblox Studio login in a downloaded Rosemary'
+    )
+    provides=(ginrose-studio)
+    conflicts=(ginrose-studio)
+    cd "ginrose-studio-$pkgver"
+    ./install-files.sh "$pkgdir"
+}

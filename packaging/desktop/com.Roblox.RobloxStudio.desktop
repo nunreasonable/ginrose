@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Roblox Studio
+Exec=ginrose-studio launch
+Icon=me.daeese.apps.ginrose.studio
+StartupWMClass=com.Roblox.RobloxStudio
+NoDisplay=true

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Roblox Studio
+GenericName=Roblox Studio (Ginrose Studio)
+Comment=Build Roblox experiences through Ginrose Studio
+Exec=ginrose-studio launch %u
+Icon=me.daeese.apps.ginrose.studio
+Categories=Development;
+MimeType=x-scheme-handler/roblox-studio;x-scheme-handler/roblox-studio-auth;
+StartupNotify=false
+StartupWMClass=com.Roblox.RobloxStudio

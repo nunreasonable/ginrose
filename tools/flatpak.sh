@@ -8,6 +8,8 @@
 #     ginrose-<version>/me.daeese.apps.ginrose.player.desktop
 #     ginrose-<version>/me.daeese.apps.ginrose.metainfo.xml
 #     ginrose-<version>/icons/<size>.png      16 to 512
+#     ginrose-<version>/desktop/*.desktop     the entries for a system install
+#     ginrose-<version>/install-files.sh      installs it into a package root
 #   me.daeese.apps.ginrose.flatpak    a bundle made from that same folder plus
 #                                      a Rosemary binary, for testing here
 #
@@ -36,12 +38,14 @@ if [ "$studio" = 1 ]; then
     id=me.daeese.apps.ginrose.studio
     name=ginrose-studio
     client=editor
+    window=com.Roblox.RobloxStudio
     icons=assets/studio-icons
     target=target/flatpak/studio
 else
     id=me.daeese.apps.ginrose
     name=ginrose
     client=player
+    window=com.roblox.RobloxPlayer
     icons=assets/icons
     target=target/flatpak
 fi
@@ -63,6 +67,12 @@ done
 for icon in "$icons"/*.png; do
     install -Dm644 "$icon" "$stage/icons/$(basename "$icon")"
 done
+# For distribution packages of the official build: the menu entries for a
+# system install, and the script that puts everything in place.
+for entry in "$id.desktop" "$id.$client.desktop" "$window.desktop"; do
+    install -Dm644 "packaging/desktop/$entry" "$stage/desktop/$entry"
+done
+install -Dm755 packaging/install-files.sh "$stage/install-files.sh"
 mkdir -p dist
 archive="dist/$name-$version-x86_64.tar.gz"
 tar --sort=name --owner=0 --group=0 --numeric-owner --mtime=@0 \

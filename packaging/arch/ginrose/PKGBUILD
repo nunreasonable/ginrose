@@ -1,0 +1,62 @@
+# Maintainer: nunreasonable <rafaelpasquarella@gmail.com>
+
+pkgbase=ginrose
+pkgname=(ginrose ginrose-studio)
+pkgver=0.3.1
+pkgrel=1
+pkgdesc="Roblox and Roblox Studio launchers for Linux, built around Rosemary"
+arch=(x86_64)
+url="https://github.com/nunreasonable/ginrose"
+license=(GPL-3.0-or-later)
+depends=(gcc-libs glibc glib2 gtk4 libadwaita)
+makedepends=(cargo)
+options=(!lto)
+source=("$pkgbase-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+# What Rosemary needs when Ginrose downloads its build instead of using the
+# rosemary package.
+_rosemary_optdepends=(
+    'rosemary: use the rosemary package instead of a downloaded Rosemary'
+    'sdl3: needed by a downloaded Rosemary (3.4 or newer)'
+    'openal: sound in a downloaded Rosemary'
+    'vulkan-icd-loader: Metal in a downloaded Rosemary'
+    'xdg-utils: open Roblox links from the browser'
+)
+
+prepare() {
+    cd "$pkgbase-$pkgver"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc --print host-tuple)"
+}
+
+build() {
+    cd "$pkgbase-$pkgver"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    cargo build --frozen --release
+}
+
+check() {
+    cd "$pkgbase-$pkgver"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo test --frozen --release --lib
+}
+
+package_ginrose() {
+    pkgdesc="Roblox launcher for Linux, built around Rosemary"
+    optdepends=("${_rosemary_optdepends[@]}")
+    cd "$pkgbase-$pkgver"
+    packaging/install-files.sh ginrose target/release/ginrose "$pkgdir"
+}
+
+package_ginrose-studio() {
+    pkgdesc="Roblox Studio launcher for Linux, built around Rosemary"
+    optdepends=(
+        "${_rosemary_optdepends[@]}"
+        'webkitgtk-6.0: Roblox Studio login in a downloaded Rosemary'
+        'glib-networking: Roblox Studio login in a downloaded Rosemary'
+    )
+    cd "$pkgbase-$pkgver"
+    packaging/install-files.sh ginrose-studio target/release/ginrose-studio "$pkgdir"
+}

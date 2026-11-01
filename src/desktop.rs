@@ -139,23 +139,37 @@ pub fn entries(flavor: Flavor, exe: &str) -> [(String, String); 3] {
     }
 }
 
+/// Whether a distribution package installed the entries, in one of the
+/// system's data folders (`packaging/desktop`). Writing them again for this
+/// user would list everything twice in the menu.
+pub fn packaged() -> bool {
+    let dirs = std::env::var_os("XDG_DATA_DIRS")
+        .filter(|dirs| !dirs.is_empty())
+        .unwrap_or_else(|| "/usr/local/share:/usr/share".into());
+    let name = format!("{}.desktop", flavor::current().client_id());
+    std::env::split_paths(&dirs).any(|dir| dir.join("applications").join(&name).is_file())
+}
+
 /// Write the entries. With `default`, also make this app the program that
 /// opens its links, taking them over from whatever opened them before. The
-/// Flatpak's entries come with the package.
+/// Flatpak's entries come with the package, and so do a distribution
+/// package's.
 pub fn install(default: bool) -> Result<(), String> {
     if paths::in_flatpak() {
         return Ok(());
     }
     let flavor = flavor::current();
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let exe = quote(&exe.to_string_lossy());
-    install_icons()?;
-    let dir = paths::applications_dir();
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    for (name, text) in entries(flavor, &exe) {
-        std::fs::write(dir.join(name), text).map_err(|e| e.to_string())?;
+    if !packaged() {
+        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        let exe = quote(&exe.to_string_lossy());
+        install_icons()?;
+        let dir = paths::applications_dir();
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        for (name, text) in entries(flavor, &exe) {
+            std::fs::write(dir.join(name), text).map_err(|e| e.to_string())?;
+        }
+        let _ = Command::new("update-desktop-database").arg(&dir).status();
     }
-    let _ = Command::new("update-desktop-database").arg(&dir).status();
     if default {
         let status = Command::new("xdg-mime")
             .arg("default")
@@ -222,6 +236,20 @@ mod tests {
             window.1,
             "[Desktop Entry]\nType=Application\nName=Roblox\nExec=/bin/ginrose launch\nIcon=me.daeese.apps.ginrose\nStartupWMClass=com.roblox.RobloxPlayer\nNoDisplay=true\n"
         );
+    }
+
+    #[test]
+    fn the_packaged_entries_are_the_ones_ginrose_writes() {
+        for (flavor, command) in [
+            (Flavor::Player, "ginrose"),
+            (Flavor::Studio, "ginrose-studio"),
+        ] {
+            for (name, text) in entries(flavor, command) {
+                let path = format!("{}/packaging/desktop/{name}", env!("CARGO_MANIFEST_DIR"));
+                let packaged = std::fs::read_to_string(&path).unwrap_or_default();
+                assert_eq!(packaged, text, "{path} is out of date");
+            }
+        }
     }
 
     #[test]

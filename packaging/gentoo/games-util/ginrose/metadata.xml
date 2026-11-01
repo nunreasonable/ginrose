@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>rafaelpasquarella@gmail.com</email>
+		<name>nunreasonable</name>
+	</maintainer>
+	<use>
+		<flag name="player">Install Ginrose, the Roblox launcher</flag>
+		<flag name="studio">Install Ginrose Studio, the Roblox Studio launcher</flag>
+	</use>
+	<upstream>
+		<remote-id type="github">nunreasonable/ginrose</remote-id>
+	</upstream>
+</pkgmetadata>

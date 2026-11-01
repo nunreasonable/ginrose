@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Roblox
+Exec=ginrose launch
+Icon=me.daeese.apps.ginrose
+StartupWMClass=com.roblox.RobloxPlayer
+NoDisplay=true
