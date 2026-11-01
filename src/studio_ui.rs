@@ -12,7 +12,9 @@ use serde_json::Value;
 
 use crate::config::Config;
 use crate::setup::in_background;
-use crate::ui::{Message, PRESENTATIONS, Shared, combo_row, receive, save, start, switch_row};
+use crate::ui::{
+    Message, PRESENTATIONS, Shared, butter_row, combo_row, receive, save, start, switch_row,
+};
 use crate::{desktop, flags, launch, machine, paths, roblox, rosemary, studio};
 
 /// The name the main window goes by, so a second `ginrose-studio` brings it
@@ -315,7 +317,7 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
     choose.add_css_class("flat");
     choose.set_tooltip_text(Some("Choose a Rosemary binary"));
     {
-        let path = path.clone();
+        let (path, apply_path) = (path.clone(), apply_path.clone());
         choose.connect_clicked(move |button| {
             let dialog = gtk::FileDialog::builder().title("Choose Rosemary").build();
             let window = button.root().and_downcast::<gtk::Window>();
@@ -333,6 +335,15 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
     }
     path.add_suffix(&choose);
     rosemary.add(&path);
+    {
+        let path = path.clone();
+        if let Some(row) = butter_row(&c.rosemary, move |text| {
+            path.set_text(&text);
+            apply_path(text);
+        }) {
+            rosemary.add(&row);
+        }
+    }
     if !flatpak {
         let row = adw::ActionRow::builder()
             .title("Download Rosemary")

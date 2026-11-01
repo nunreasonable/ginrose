@@ -86,8 +86,10 @@ if [ "$studio" = 1 ]; then
     # Discord), plus the home folder: Studio opens and saves places, plugins
     # and model files wherever the user keeps them, tools like Rojo write
     # into project folders there, and a Rosemary chosen in the settings is
-    # usually somewhere in it too. The network covers Rojo's local server,
-    # pulseaudio and input devices playtesting.
+    # usually somewhere in it too. Butter's Flatpak keeps its runners under
+    # ~/.var/app, which the home folder leaves out, so they get a read-only
+    # entry of their own. The network covers Rojo's local server, pulseaudio
+    # and input devices playtesting.
     flatpak build-finish "$build" \
         --command=ginrose-studio \
         --share=network \
@@ -98,6 +100,7 @@ if [ "$studio" = 1 ]; then
         --device=dri \
         --device=input \
         --filesystem=home \
+        --filesystem=~/.var/app/io.github.microlift.butter/data/butter/runners:ro \
         --require-version=1.16.0
 else
     flatpak build-finish "$build" \

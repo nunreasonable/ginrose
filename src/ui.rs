@@ -9,7 +9,7 @@ use gtk::{gio, glib};
 use serde_json::Value;
 
 use crate::config::{Config, Profile};
-use crate::{desktop, flags, flavor, launch, presence, roblox, studio};
+use crate::{butter, desktop, flags, flavor, launch, presence, roblox, studio};
 
 pub type Shared = Rc<RefCell<Config>>;
 
@@ -408,6 +408,34 @@ pub fn combo_row(
     row
 }
 
+/// The Rosemary builds Butter has installed, to use one without looking for
+/// its binary; nothing when Butter has none.
+pub fn butter_row(current: &str, pick: impl Fn(String) + 'static) -> Option<adw::ComboRow> {
+    let runners = butter::runners();
+    if runners.is_empty() {
+        return None;
+    }
+    let mut items = vec!["Choose one".to_string()];
+    items.extend(runners.iter().map(|r| r.label()));
+    let items: Vec<&str> = items.iter().map(String::as_str).collect();
+    let selected = runners
+        .iter()
+        .position(|r| r.executable.as_os_str() == current)
+        .map_or(0, |i| i as u32 + 1);
+    let row = combo_row(
+        "Rosemary from Butter",
+        "A runner Butter installed",
+        &items,
+        selected,
+        move |i| {
+            if let Some(runner) = (i as usize).checked_sub(1).and_then(|i| runners.get(i)) {
+                pick(runner.executable.to_string_lossy().into_owned());
+            }
+        },
+    );
+    Some(row)
+}
+
 const QUALITIES: &[&str] = &[
     "Roblox's own",
     "1",
@@ -616,21 +644,32 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
         .text(&c.rosemary)
         .show_apply_button(true)
         .build();
-    {
+    let apply_path = {
         let config = config.clone();
         let toasts = toasts.clone();
-        path.connect_apply(move |row| {
-            config.borrow_mut().rosemary = row.text().trim().to_string();
+        move |text: String| {
+            config.borrow_mut().rosemary = text;
             save(&config);
             let found = config.borrow().rosemary_path();
             toasts.add_toast(adw::Toast::new(&match found {
                 Some(p) => format!("Using {}", p.display()),
                 None => "That file does not exist".to_string(),
             }));
-        });
+        }
+    };
+    {
+        let apply_path = apply_path.clone();
+        path.connect_apply(move |row| apply_path(row.text().trim().to_string()));
     }
     if !crate::paths::in_flatpak() {
         rosemary.add(&path);
+        let path = path.clone();
+        if let Some(row) = butter_row(&c.rosemary, move |text| {
+            path.set_text(&text);
+            apply_path(text);
+        }) {
+            rosemary.add(&row);
+        }
     }
     let links = adw::ActionRow::builder()
         .title("Open Roblox links with Ginrose")

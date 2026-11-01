@@ -176,9 +176,29 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     let line = gtk::Label::new(None);
     line.add_css_class("dim-label");
     line.set_wrap(true);
+    // Butter's runners, as a list beside the file chooser. Ginrose's Flatpak
+    // only runs its own Rosemary.
+    let butter = gtk::ListBox::new();
+    butter.add_css_class("boxed-list");
+    butter.set_selection_mode(gtk::SelectionMode::None);
+    butter.set_visible(false);
+    if studio || !flatpak {
+        let config = config.clone();
+        let describe_found = describe_found.clone();
+        let current = config.borrow().rosemary.clone();
+        if let Some(row) = crate::ui::butter_row(&current, move |text| {
+            config.borrow_mut().rosemary = text;
+            let _ = config.borrow().save();
+            describe_found();
+        }) {
+            butter.append(&row);
+            butter.set_visible(true);
+        }
+    }
     for widget in [
         found.upcast_ref::<gtk::Widget>(),
         choose.upcast_ref(),
+        butter.upcast_ref(),
         fetch.upcast_ref(),
         fetch_fork.upcast_ref(),
         bar.upcast_ref(),

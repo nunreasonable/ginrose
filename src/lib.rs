@@ -1,6 +1,7 @@
 //! Ginrose and Ginrose Studio. Both binaries are this library with a different
 //! [`Flavor`]; see `flavor.rs`.
 
+mod butter;
 mod cli;
 mod config;
 mod desktop;
