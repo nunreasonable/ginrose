@@ -48,7 +48,8 @@ const ORGANIZATIONAL_UNIT: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.
 /// Marks Apple's Developer ID intermediate authority.
 const DEVELOPER_ID_CA: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.113635.100.6.2.6");
 /// Marks a Developer ID Application certificate.
-const DEVELOPER_ID_APP: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.113635.100.6.1.13");
+const DEVELOPER_ID_APP: ObjectIdentifier =
+    ObjectIdentifier::new_unwrap("1.2.840.113635.100.6.1.13");
 
 const CPU_X86_64: u32 = 0x0100_0007;
 const LC_CODE_SIGNATURE: u32 = 0x1d;
@@ -147,7 +148,10 @@ fn superblob(slice: &[u8]) -> Check<(usize, BTreeMap<u32, Vec<u8>>)> {
     for _ in 0..commands {
         let (cmd, size) = (le32(slice, at)?, le32(slice, at + 4)? as usize);
         if cmd == LC_CODE_SIGNATURE {
-            signature = Some((le32(slice, at + 8)? as usize, le32(slice, at + 12)? as usize));
+            signature = Some((
+                le32(slice, at + 8)? as usize,
+                le32(slice, at + 12)? as usize,
+            ));
         }
         if size < 8 {
             return Err("bad load command".into());
@@ -300,7 +304,11 @@ fn organizational_units(cert: &Certificate) -> Vec<String> {
             atv.value
                 .decode_as::<Utf8StringRef>()
                 .map(|s| s.to_string())
-                .or_else(|_| atv.value.decode_as::<PrintableStringRef>().map(|s| s.to_string()))
+                .or_else(|_| {
+                    atv.value
+                        .decode_as::<PrintableStringRef>()
+                        .map(|s| s.to_string())
+                })
                 .ok()
         })
         .collect()
@@ -327,7 +335,10 @@ fn issued_by(cert: &Certificate, issuer: &Certificate) -> Check {
         return Err("certificate is not signed with SHA-256 and RSA".into());
     }
     let tbs = cert.tbs_certificate.to_der().map_err(|e| e.to_string())?;
-    let signature = cert.signature.as_bytes().ok_or("bad certificate signature")?;
+    let signature = cert
+        .signature
+        .as_bytes()
+        .ok_or("bad certificate signature")?;
     rsa_key(issuer)?
         .verify(Pkcs1v15Sign::new::<Sha256>(), &sha256(&tbs), signature)
         .map_err(|_| "certificate signature does not verify".to_string())
@@ -511,8 +522,12 @@ impl Seal {
             let pattern = regex::Regex::new(&pattern).map_err(|e| e.to_string())?;
             let (weight, omit) = match rule.as_dictionary() {
                 Some(d) => (
-                    d.get("weight").and_then(plist::Value::as_real).unwrap_or(1.0),
-                    d.get("omit").and_then(plist::Value::as_boolean).unwrap_or(false),
+                    d.get("weight")
+                        .and_then(plist::Value::as_real)
+                        .unwrap_or(1.0),
+                    d.get("omit")
+                        .and_then(plist::Value::as_boolean)
+                        .unwrap_or(false),
                 ),
                 None => (1.0, false),
             };
@@ -637,7 +652,10 @@ fn bundle(contents: &Path, depth: usize) -> Check<Code> {
         if entry.is_some_and(|d| d.contains_key("cdhash")) {
             continue;
         }
-        if let Some(target) = entry.and_then(|d| d.get("symlink")).and_then(plist::Value::as_string) {
+        if let Some(target) = entry
+            .and_then(|d| d.get("symlink"))
+            .and_then(plist::Value::as_string)
+        {
             let link = std::fs::read_link(&at).map_err(|e| format!("{path}: {e}"))?;
             if !kind.is_symlink() || link != Path::new(target) {
                 return Err(format!("{path} was changed"));
@@ -685,7 +703,9 @@ fn settings_file(contents: &Path) -> Check {
     let flags: BTreeMap<String, serde_json::Value> = serde_json::from_slice(&text)
         .map_err(|_| "ClientAppSettings.json is not a flag list".to_string())?;
     match flags.keys().find(|name| flags::find(name).is_none()) {
-        Some(name) => Err(format!("ClientAppSettings.json sets {name}, which is not allowlisted")),
+        Some(name) => Err(format!(
+            "ClientAppSettings.json sets {name}, which is not allowlisted"
+        )),
         None => Ok(()),
     }
 }
@@ -695,7 +715,10 @@ pub fn client(app: &Path) -> Check {
     let contents = app.join("Contents");
     let main = bundle(&contents, 0)?;
     if main.signed.identifier != IDENTIFIER {
-        return Err(format!("the app is {:?}, not Roblox", main.signed.identifier));
+        return Err(format!(
+            "the app is {:?}, not Roblox",
+            main.signed.identifier
+        ));
     }
     settings_file(&contents)
 }
@@ -738,15 +761,56 @@ pub fn prefix(rosemary: &Path, may_update: bool) -> Check {
             ));
         }
     }
-    let (ok, text) = rosemary_output(rosemary, &["verify"])?;
+    let (ok, mut text) = rosemary_output(rosemary, &["verify"])?;
     if ok {
         return Ok(());
+    }
+    // A newer Rosemary can add system files a prefix made by an older one
+    // never had. Putting back what is only missing changes nothing that was
+    // there, so it happens on its own; a changed file still stops the launch.
+    if may_update && only_missing(&text) {
+        repair_prefix(rosemary)?;
+        let (ok, again) = rosemary_output(rosemary, &["verify"])?;
+        if ok {
+            return Ok(());
+        }
+        text = again;
     }
     let detail = text
         .lines()
         .find(|l| l.contains("entries checked"))
         .map_or_else(|| text.trim().to_string(), |l| l.trim().to_string());
-    Err(format!("the Rosemary prefix's system files were changed ({detail})"))
+    Err(format!(
+        "the Rosemary prefix's system files were changed ({detail})"
+    ))
+}
+
+/// Whether `rosemary prefix verify` found system files missing and nothing
+/// else wrong: its summary reads "N entries checked: M missing, 0 modified,
+/// 0 wrong-type, 0 mode".
+fn only_missing(report: &str) -> bool {
+    let Some(summary) = report
+        .lines()
+        .find_map(|l| l.split_once("entries checked:"))
+    else {
+        return false;
+    };
+    let mut missing = 0;
+    for part in summary.1.split(',') {
+        let mut words = part.split_whitespace();
+        let (Some(count), Some(kind)) = (words.next(), words.next()) else {
+            return false;
+        };
+        let Ok(count) = count.parse::<u64>() else {
+            return false;
+        };
+        match kind {
+            "missing" => missing = count,
+            _ if count > 0 => return false,
+            _ => {}
+        }
+    }
+    missing > 0
 }
 
 /// Put the prefix's system files back the way the base has them.
@@ -812,6 +876,20 @@ pub fn explain(problem: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn only_missing_system_files_are_put_back_on_their_own() {
+        let missing = "system integrity:\n  missing    /System/Library/CoreServices\n  12998 entries checked: 1 missing, 0 modified, 0 wrong-type, 0 mode\n";
+        assert!(only_missing(missing));
+        let changed = "  12998 entries checked: 1 missing, 2 modified, 0 wrong-type, 0 mode\n";
+        assert!(!only_missing(changed));
+        let mode = "  12998 entries checked: 0 missing, 0 modified, 0 wrong-type, 1 mode\n";
+        assert!(!only_missing(mode));
+        assert!(!only_missing(
+            "  12998 entries checked: 0 missing, 0 modified, 0 wrong-type, 0 mode\n"
+        ));
+        assert!(!only_missing("rosemary: could not read the manifest\n"));
+    }
+
     use super::*;
 
     fn installed() -> Option<std::path::PathBuf> {
