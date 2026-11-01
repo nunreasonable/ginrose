@@ -116,7 +116,11 @@ fn cli_verify() -> ExitCode {
         },
         None => println!("prefix:   no Rosemary to check it with"),
     }
-    if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+    if ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
 }
 
 fn cli_repair() -> ExitCode {
