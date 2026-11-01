@@ -18,10 +18,10 @@ git rev-parse -q --verify "refs/tags/v$version" >/dev/null \
 git worktree add -q --detach "$tmp/src" "v$version"
 
 echo ":: Downloading the release"
-curl -fsSL -o "$tmp/ginrose.tar.gz" "$release/ginrose-$version-x86_64.tar.gz"
+curl -fsSL -o "$tmp/ginrose-$version-x86_64.tar.gz" "$release/ginrose-$version-x86_64.tar.gz"
 curl -fsSL -o "$tmp/SHA256SUMS" "$release/SHA256SUMS"
 (cd "$tmp" && grep " ginrose-$version-x86_64.tar.gz\$" SHA256SUMS | sha256sum -c --quiet -)
-tar -xzf "$tmp/ginrose.tar.gz" -C "$tmp"
+tar -xzf "$tmp/ginrose-$version-x86_64.tar.gz" -C "$tmp"
 
 echo ":: Building v$version"
 (
@@ -40,10 +40,16 @@ compare() {
 }
 same=1
 compare "$tmp/ginrose-$version/ginrose" "$tmp/src/target/release/ginrose" ginrose || same=0
+# Ginrose Studio's builds are released from their own repository.
 studio="ginrose-studio-$version-x86_64.tar.gz"
-if grep -q " $studio\$" "$tmp/SHA256SUMS"; then
-    curl -fsSL -o "$tmp/$studio" "$release/$studio"
-    (cd "$tmp" && grep " $studio\$" SHA256SUMS | sha256sum -c --quiet -)
+studio_release="https://github.com/nunreasonable/ginrose-studio/releases/download/v$version"
+mkdir "$tmp/studio"
+if curl -fsSL -o "$tmp/studio/SHA256SUMS" "$studio_release/SHA256SUMS" 2>/dev/null \
+    && grep -q " $studio\$" "$tmp/studio/SHA256SUMS"; then
+    echo ":: Downloading the Ginrose Studio release"
+    curl -fsSL -o "$tmp/studio/$studio" "$studio_release/$studio"
+    (cd "$tmp/studio" && grep " $studio\$" SHA256SUMS | sha256sum -c --quiet -)
+    mv "$tmp/studio/$studio" "$tmp/$studio"
     tar -xzf "$tmp/$studio" -C "$tmp"
     compare "$tmp/ginrose-studio-$version/ginrose-studio" \
         "$tmp/src/target/release/ginrose-studio" ginrose-studio || same=0
