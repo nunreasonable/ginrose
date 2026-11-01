@@ -14,7 +14,8 @@ the application ID `me.daeese.apps.ginrose.studio` (and
 ## Fine without asking
 
 - Sharing the official builds unmodified, from
-  [ginrose-flatpak](https://github.com/nunreasonable/ginrose-flatpak) or
+  [ginrose-flatpak](https://github.com/nunreasonable/ginrose-flatpak),
+  [ginrose-studio](https://github.com/nunreasonable/ginrose-studio) or
   Flathub, including in software stores and distribution repositories.
 - Building Ginrose from unmodified source, for yourself or for a distribution
   package, and calling it Ginrose.

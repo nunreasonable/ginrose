@@ -141,6 +141,13 @@ It differs from Ginrose where an editor needs it to:
   first, which is what lets a login link reach the running Studio.
 - No Discord status, frame cap or per-game profiles; those are for playing.
 
+Its installer and official builds are at
+[ginrose-studio](https://github.com/nunreasonable/ginrose-studio):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/nunreasonable/ginrose-studio/main/install.sh | sh
+```
+
 The Flatpak (`me.daeese.apps.ginrose.studio`) has Ginrose's permissions,
 without Discord's socket and with your home folder, so Studio can open and
 save places, plugins and Rojo projects wherever you keep them. To have it open
@@ -184,8 +191,9 @@ name. See [TRADEMARKS.md](TRADEMARKS.md).
 ### Official builds
 
 Official builds come only from
-[ginrose-flatpak](https://github.com/nunreasonable/ginrose-flatpak) (and
-Flathub, once it is there). Ginrose's refuse to start a modified Roblox client.
+[ginrose-flatpak](https://github.com/nunreasonable/ginrose-flatpak) for Ginrose
+and [ginrose-studio](https://github.com/nunreasonable/ginrose-studio) for
+Ginrose Studio (and Flathub, once they are there). Ginrose's refuse to start a modified Roblox client.
 A build from somewhere else, or a fork that drops that check, is not Ginrose,
 whatever it calls itself. Ginrose Studio has no such check by design; an
 official build of it is still only one from those places.

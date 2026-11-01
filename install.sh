@@ -2,6 +2,7 @@
 # Install Ginrose for the current user, without Flatpak.
 #
 #   ./install.sh              download the latest release from ginrose-flatpak
+#                             (Ginrose Studio's from ginrose-studio)
 #   ./install.sh --source     build from this checkout instead (needs cargo)
 #   ./install.sh --studio     Ginrose Studio instead of Ginrose (either way)
 #
@@ -40,7 +41,7 @@ for arg in "$@"; do
     case "$arg" in
         --source) from_source=1 ;;
         --with-rosemary) with_rosemary=1 ;;
-        --studio) name=ginrose-studio ;;
+        --studio) name=ginrose-studio REPO="nunreasonable/ginrose-studio" ;;
         *) die "Unknown option: $arg" ;;
     esac
 done
