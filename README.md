@@ -74,6 +74,13 @@ run once:
 xdg-mime default me.daeese.apps.ginrose.player.desktop x-scheme-handler/roblox-player x-scheme-handler/roblox
 ```
 
+### Native packages
+
+Each release also has the official build as an Arch, Debian and RPM package,
+and [`packaging/`](packaging) has recipes that build from source for Arch,
+Fedora and openSUSE, NixOS and Gentoo. See
+[packaging/README.md](packaging/README.md) for what each one needs.
+
 ### Building the Flatpak
 
 ```sh
