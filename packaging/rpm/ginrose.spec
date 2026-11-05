@@ -7,7 +7,7 @@
 %global debug_package %{nil}
 
 Name:           ginrose
-Version:        0.3.1
+Version:        0.3.2
 Release:        1%{?dist}
 Summary:        Roblox launcher for Linux, built around Rosemary
 # Ginrose is GPL-3.0-or-later; the rest are the statically linked crates'.
@@ -101,5 +101,8 @@ rm -r %{buildroot}%{_datadir}/licenses
 %{_datadir}/metainfo/me.daeese.apps.ginrose.studio.metainfo.xml
 
 %changelog
+* Thu Nov 05 2026 nunreasonable <rafaelpasquarella@gmail.com> - 0.3.2-1
+- Rosemary with smoother frame pacing and Wayland pointer warps
+
 * Sat Oct 31 2026 nunreasonable <rafaelpasquarella@gmail.com> - 0.3.1-1
 - Native packages
