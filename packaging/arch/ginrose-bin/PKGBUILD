@@ -3,7 +3,7 @@
 # The official builds from the releases, the same binaries the Flatpaks run.
 pkgbase=ginrose-bin
 pkgname=(ginrose-bin ginrose-studio-bin)
-pkgver=0.3.2
+pkgver=0.3.3
 pkgrel=1
 pkgdesc="Roblox and Roblox Studio launchers for Linux, built around Rosemary (official builds)"
 arch=(x86_64)
