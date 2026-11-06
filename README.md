@@ -8,7 +8,7 @@
 <p align="center">A Roblox launcher for Linux, built around <a href="https://github.com/microlift/rosemary">Rosemary</a>, and <a href="#ginrose-studio">Ginrose Studio</a>, the same for Roblox Studio.</p>
 
 > [!WARNING]
-> ## This is a personal project
+> ## This is an experimental project
 >
 > Ginrose was made for one computer (Fedora, Hyprland, an NVIDIA card) and is
 > only tested there. It may well not work on yours: other distros, desktops and
