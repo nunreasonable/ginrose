@@ -161,12 +161,14 @@ fn cli_rosemary(source: Option<&String>) -> ExitCode {
     let tmp = target.with_extension("new");
     let result = std::fs::create_dir_all(target.parent().unwrap())
         .and_then(|_| std::fs::copy(source, &tmp))
-        .and_then(|_| std::fs::rename(&tmp, &target));
-    match result {
-        Ok(()) => {
+        .and_then(|_| std::fs::rename(&tmp, &target))
+        .and_then(|_| {
             let mut config = config::Config::load();
             config.rosemary.clear();
-            let _ = config.save();
+            config.save()
+        });
+    match result {
+        Ok(()) => {
             eprintln!("Rosemary installed at {}", target.display());
             ExitCode::SUCCESS
         }
