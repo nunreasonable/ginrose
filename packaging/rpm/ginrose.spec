@@ -7,7 +7,7 @@
 %global debug_package %{nil}
 
 Name:           ginrose
-Version:        0.3.3
+Version:        0.3.4
 Release:        1%{?dist}
 Summary:        Roblox launcher for Linux, built around Rosemary
 # Ginrose is GPL-3.0-or-later; the rest are the statically linked crates'.
@@ -101,6 +101,9 @@ rm -r %{buildroot}%{_datadir}/licenses
 %{_datadir}/metainfo/me.daeese.apps.ginrose.studio.metainfo.xml
 
 %changelog
+* Fri Nov 06 2026 nunreasonable <rafaelpasquarella@gmail.com> - 0.3.4-1
+- The rosemary command reports a configuration it could not save
+
 * Fri Nov 06 2026 nunreasonable <rafaelpasquarella@gmail.com> - 0.3.3-1
 - Presented handlers run when the frame is on screen, without holding back presentation
 
