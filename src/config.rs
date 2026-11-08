@@ -41,6 +41,10 @@ pub struct Config {
     /// Ginrose Studio's extra arguments for Studio, after the app.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub launch_args: Vec<String>,
+    /// Show the server's region over a corner of the game.
+    pub region_badge: bool,
+    /// Which corner: one of `region::CORNERS`.
+    pub region_corner: String,
     /// The first-run setup has been through to the end.
     pub setup_done: bool,
 }
@@ -73,6 +77,8 @@ impl Config {
             profiles: Vec::new(),
             extra_env: BTreeMap::new(),
             launch_args: Vec::new(),
+            region_badge: false,
+            region_corner: crate::region::DEFAULT_CORNER.to_string(),
             setup_done: false,
         };
         match flavor {

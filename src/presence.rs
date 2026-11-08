@@ -39,7 +39,11 @@ struct Custom {
 }
 
 enum Line {
-    Joining { place_id: u64 },
+    Joining {
+        place_id: u64,
+    },
+    /// The public address of the server the client connected to.
+    Server(String),
     Universe(u64),
     Left,
     Rpc(Value),
@@ -47,6 +51,7 @@ enum Line {
 
 struct Patterns {
     joining: Regex,
+    server: Regex,
     universe: Regex,
     left: Regex,
     rpc: Regex,
@@ -56,6 +61,7 @@ impl Patterns {
     fn new() -> Patterns {
         Patterns {
             joining: Regex::new(r"! Joining game '[^']*' place (\d+)").unwrap(),
+            server: Regex::new(r"UDMUX Address = (\d+\.\d+\.\d+\.\d+)").unwrap(),
             universe: Regex::new(r"universeid:(\d+)").unwrap(),
             left: Regex::new(r"leaveUGCGameInternal|Time to disconnect replication data").unwrap(),
             rpc: Regex::new(r"\[BloxstrapRPC\] (\{.*\})\s*$").unwrap(),
@@ -67,6 +73,9 @@ impl Patterns {
             return Some(Line::Joining {
                 place_id: c[1].parse().ok()?,
             });
+        }
+        if let Some(c) = self.server.captures(line) {
+            return Some(Line::Server(c[1].to_string()));
         }
         if let Some(c) = self.rpc.captures(line) {
             return serde_json::from_str(&c[1]).ok().map(Line::Rpc);
@@ -269,8 +278,9 @@ fn newest_log(since: SystemTime) -> Option<PathBuf> {
         .map(|(_, path)| path)
 }
 
-/// Follow the log until `alive` says Roblox is gone, keeping Discord up to date.
-pub fn follow(settings: &config::Discord, alive: &dyn Fn() -> bool) {
+/// Follow the log until `alive` says Roblox is gone, keeping Discord up to date
+/// and, with `region`, the server's region over the game.
+pub fn follow(settings: &config::Discord, region: bool, alive: &dyn Fn() -> bool) {
     let mut client = Client::new(settings.application());
     let enabled = settings.enabled && !settings.application().is_empty();
     // `GINROSE_DEBUG=1` prints the status it would show, Discord or not.
@@ -319,7 +329,16 @@ pub fn follow(settings: &config::Discord, alive: &dyn Fn() -> bool) {
                             game.universe_id = universe;
                         }
                     }
+                    Some(Line::Server(address)) if region => {
+                        // Off this loop: the lookup is a web request.
+                        std::thread::spawn(move || {
+                            crate::region::show(crate::region::locate(&address).as_deref())
+                        });
+                    }
                     Some(Line::Left) => {
+                        if region {
+                            crate::region::show(None);
+                        }
                         game = None;
                         custom = Custom::default();
                         dirty = true;
@@ -353,6 +372,9 @@ pub fn follow(settings: &config::Discord, alive: &dyn Fn() -> bool) {
     if enabled {
         client.set_activity(None);
     }
+    if region {
+        crate::region::show(None);
+    }
 }
 
 #[cfg(test)]
@@ -369,6 +391,10 @@ mod tests {
                 place_id: 18667984660
             })
         ));
+        let server = "2026-11-07T21:20:10.705Z,9.705988,e9a10000,6 [FLog::Network] UDMUX Address = 128.116.86.33, Port = 56476 | RCC Server Address = 10.33.1.199, Port = 59743";
+        assert!(
+            matches!(p.parse(server), Some(Line::Server(address)) if address == "128.116.86.33")
+        );
         let load = "[FLog::GameJoinLoadTime] Report game_join_loadtime: placeid:18667984660, universeid:6325043396, x";
         assert!(matches!(p.parse(load), Some(Line::Universe(6325043396))));
         assert!(matches!(

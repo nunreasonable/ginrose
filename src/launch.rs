@@ -224,6 +224,9 @@ fn environment(config: &Config, command: &mut Command) {
     if config.mangohud {
         command.env("MANGOHUD", "1");
     }
+    if !studio {
+        crate::region::environment(config, command);
+    }
     if paths::in_flatpak() {
         // Matches the client entry the package exports, for the window's icon.
         command.env("SDL_APP_ID", flavor::current().client_id());

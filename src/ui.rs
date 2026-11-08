@@ -70,7 +70,7 @@ pub fn start(config: Config, uri: Option<String>) -> mpsc::Receiver<Message> {
             return;
         }
         let child = RefCell::new(child.child);
-        presence::follow(&config.discord, &|| {
+        presence::follow(&config.discord, config.region_badge, &|| {
             !matches!(child.borrow_mut().try_wait(), Ok(Some(_)))
         });
         let _ = tx.send(Message::Exited);
@@ -590,6 +590,33 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
         },
     ));
     page.add(&discord);
+
+    let region = adw::PreferencesGroup::builder()
+        .title("Server region")
+        .description("The city and country of the server you are on, over a corner of the game. Asks ipinfo.io about the server's address; works with Ginrose's own Rosemary")
+        .build();
+    let shared = config.clone();
+    region.add(&switch_row(
+        "Show the server's region",
+        "",
+        c.region_badge,
+        move |on| {
+            shared.borrow_mut().region_badge = on;
+            save(&shared);
+        },
+    ));
+    let shared = config.clone();
+    region.add(&combo_row(
+        "Corner",
+        "",
+        &crate::region::CORNERS.map(|(_, label)| label),
+        crate::region::corner_index(&c.region_corner),
+        move |index| {
+            shared.borrow_mut().region_corner = crate::region::corner_name(index).to_string();
+            save(&shared);
+        },
+    ));
+    page.add(&region);
 
     let machine = adw::PreferencesGroup::builder()
         .title("This machine")

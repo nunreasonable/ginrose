@@ -330,6 +330,28 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     inner.append(&group);
     stack.add_named(&discord_page, Some("discord"));
 
+    // Server region.
+    let (region_page, inner) = page(
+        "Server region",
+        "Show the city and country of the Roblox server you are on, in a corner of the game. Finding them asks ipinfo.io about the server's address, which also lets ipinfo.io see yours. It works with Ginrose's own Rosemary.",
+    );
+    let group = adw::PreferencesGroup::new();
+    let region = adw::SwitchRow::builder()
+        .title("Show the server's region")
+        .active(config.borrow().region_badge)
+        .build();
+    let corner = adw::ComboRow::builder()
+        .title("Corner")
+        .model(&gtk::StringList::new(
+            &crate::region::CORNERS.map(|(_, label)| label),
+        ))
+        .selected(crate::region::corner_index(&config.borrow().region_corner))
+        .build();
+    group.add(&region);
+    group.add(&corner);
+    inner.append(&group);
+    stack.add_named(&region_page, Some("region"));
+
     // Desktop.
     let (desktop_page, inner) = match studio {
         false => page(
@@ -376,8 +398,10 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
 
     let pages: &[&str] = match (studio, flatpak) {
         (true, _) => &["welcome", "rosemary", "roblox", "desktop"],
-        (false, true) => &["welcome", "roblox", "discord", "desktop"],
-        (false, false) => &["welcome", "rosemary", "roblox", "discord", "desktop"],
+        (false, true) => &["welcome", "roblox", "discord", "region", "desktop"],
+        (false, false) => &[
+            "welcome", "rosemary", "roblox", "discord", "region", "desktop",
+        ],
     };
     let index = Rc::new(Cell::new(0usize));
     let back = gtk::Button::with_label("Back");
@@ -430,6 +454,8 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
             {
                 let mut c = config.borrow_mut();
                 c.discord.enabled = enabled.is_active();
+                c.region_badge = region.is_active();
+                c.region_corner = crate::region::corner_name(corner.selected()).to_string();
                 c.setup_done = true;
             }
             let _ = config.borrow().save();

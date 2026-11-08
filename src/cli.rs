@@ -80,7 +80,7 @@ fn cli_launch(uri: Option<String>) -> ExitCode {
         };
     }
     let child = std::cell::RefCell::new(child.child);
-    presence::follow(&config.discord, &|| {
+    presence::follow(&config.discord, config.region_badge, &|| {
         !matches!(child.borrow_mut().try_wait(), Ok(Some(_)))
     });
     ExitCode::SUCCESS

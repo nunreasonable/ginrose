@@ -13,6 +13,7 @@ mod launch;
 mod machine;
 mod paths;
 mod presence;
+mod region;
 mod roblox;
 mod rosemary;
 mod settings;
