@@ -39,6 +39,9 @@ Roblox reads local settings from.
 - **Your own Discord Rich Presence**: game name, creator, icon, time played
   and a button to the game page. Games that send status through the
   BloxstrapRPC convention can set their own text and images.
+- **Server location**, off by default: where the server you join is, shown
+  for a few seconds over the game. Ginrose asks ipinfo.io about the server's
+  address (needs Ginrose's Rosemary build, below).
 - **Machine checks** before launching: a GPU handed to a virtual machine, a
   missing NVIDIA Vulkan driver, and a video wallpaper (mpvpaper) that keeps
   decoding behind the game.
