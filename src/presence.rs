@@ -332,12 +332,14 @@ pub fn follow(settings: &config::Discord, region: bool, alive: &dyn Fn() -> bool
                     Some(Line::Server(address)) if region => {
                         // Off this loop: the lookup is a web request.
                         std::thread::spawn(move || {
-                            crate::region::show(crate::region::locate(&address).as_deref())
+                            if let Some(place) = crate::region::locate(&address) {
+                                crate::region::announce(&place);
+                            }
                         });
                     }
                     Some(Line::Left) => {
                         if region {
-                            crate::region::show(None);
+                            crate::region::hide();
                         }
                         game = None;
                         custom = Custom::default();
@@ -373,7 +375,7 @@ pub fn follow(settings: &config::Discord, region: bool, alive: &dyn Fn() -> bool
         client.set_activity(None);
     }
     if region {
-        crate::region::show(None);
+        crate::region::hide();
     }
 }
 

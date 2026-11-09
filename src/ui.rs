@@ -593,7 +593,7 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
 
     let region = adw::PreferencesGroup::builder()
         .title("Server region")
-        .description("The city and country of the server you are on, over a corner of the game. Asks ipinfo.io about the server's address; works with Ginrose's own Rosemary")
+        .description("Where the server you join is, for a few seconds over the game. Asks ipinfo.io about the server's address; works with Ginrose's own Rosemary")
         .build();
     let shared = config.clone();
     region.add(&switch_row(
@@ -607,12 +607,12 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
     ));
     let shared = config.clone();
     region.add(&combo_row(
-        "Corner",
+        "Position",
         "",
-        &crate::region::CORNERS.map(|(_, label)| label),
-        crate::region::corner_index(&c.region_corner),
+        &crate::region::POSITIONS.map(|(_, label)| label),
+        crate::region::position_index(&c.region_position),
         move |index| {
-            shared.borrow_mut().region_corner = crate::region::corner_name(index).to_string();
+            shared.borrow_mut().region_position = crate::region::position_name(index).to_string();
             save(&shared);
         },
     ));

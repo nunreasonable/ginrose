@@ -43,8 +43,8 @@ pub struct Config {
     pub launch_args: Vec<String>,
     /// Show the server's region over a corner of the game.
     pub region_badge: bool,
-    /// Which corner: one of `region::CORNERS`.
-    pub region_corner: String,
+    /// Where: one of `region::POSITIONS`.
+    pub region_position: String,
     /// The first-run setup has been through to the end.
     pub setup_done: bool,
 }
@@ -78,7 +78,7 @@ impl Config {
             extra_env: BTreeMap::new(),
             launch_args: Vec::new(),
             region_badge: false,
-            region_corner: crate::region::DEFAULT_CORNER.to_string(),
+            region_position: crate::region::DEFAULT_POSITION.to_string(),
             setup_done: false,
         };
         match flavor {

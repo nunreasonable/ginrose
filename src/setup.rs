@@ -333,22 +333,24 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
     // Server region.
     let (region_page, inner) = page(
         "Server region",
-        "Show the city and country of the Roblox server you are on, in a corner of the game. Finding them asks ipinfo.io about the server's address, which also lets ipinfo.io see yours. It works with Ginrose's own Rosemary.",
+        "Show where the Roblox server you join is, for a few seconds over the game. Finding them asks ipinfo.io about the server's address, which also lets ipinfo.io see yours. It works with Ginrose's own Rosemary.",
     );
     let group = adw::PreferencesGroup::new();
     let region = adw::SwitchRow::builder()
         .title("Show the server's region")
         .active(config.borrow().region_badge)
         .build();
-    let corner = adw::ComboRow::builder()
-        .title("Corner")
+    let position = adw::ComboRow::builder()
+        .title("Position")
         .model(&gtk::StringList::new(
-            &crate::region::CORNERS.map(|(_, label)| label),
+            &crate::region::POSITIONS.map(|(_, label)| label),
         ))
-        .selected(crate::region::corner_index(&config.borrow().region_corner))
+        .selected(crate::region::position_index(
+            &config.borrow().region_position,
+        ))
         .build();
     group.add(&region);
-    group.add(&corner);
+    group.add(&position);
     inner.append(&group);
     stack.add_named(&region_page, Some("region"));
 
@@ -455,7 +457,7 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
                 let mut c = config.borrow_mut();
                 c.discord.enabled = enabled.is_active();
                 c.region_badge = region.is_active();
-                c.region_corner = crate::region::corner_name(corner.selected()).to_string();
+                c.region_position = crate::region::position_name(position.selected()).to_string();
                 c.setup_done = true;
             }
             let _ = config.borrow().save();
