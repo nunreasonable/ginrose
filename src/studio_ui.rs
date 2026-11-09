@@ -438,8 +438,8 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
     ));
     let shared = config.clone();
     studio.add(&switch_row(
-        "Control for copy and paste",
-        "Ctrl+A/C/V/X/Z act as Command, as the Mac app expects",
+        "Control as Command",
+        "Ctrl does what Command does on a Mac, as in Studio on Windows",
         c.control_edit_keys,
         move |on| {
             shared.borrow_mut().control_edit_keys = on;

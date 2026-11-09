@@ -154,6 +154,9 @@ It differs from Ginrose where an editor needs it to:
   browser login (`roblox-studio-auth:`) goes back to the Studio that asked
   for it. Studio's browser login needs Ginrose Studio to be the program that
   opens these links.
+- **Ctrl as Command** in every shortcut, as in Studio on Windows: Ctrl+1 to 4
+  pick the tools, Ctrl+S saves and Ctrl-click adds to a selection. Super
+  becomes Control. It can be turned off in the settings.
 - Buttons to open Studio's **plugins folder** and the prefix's **Documents**.
 - One instance: a second `ginrose-studio` passes what it was given to the
   first, which is what lets a login link reach the running Studio.

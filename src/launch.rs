@@ -219,7 +219,12 @@ fn environment(config: &Config, command: &mut Command) {
         command.env("__GL_SHADER_DISK_CACHE_SKIP_CLEANUP", "1");
     }
     if config.control_edit_keys {
-        command.env("ROSEMARY_CONTROL_EDIT_KEYS", "1");
+        match studio {
+            // Studio takes its shortcuts with Command on a Mac and Control on
+            // Windows: tools, saving, and Ctrl-click to add to a selection.
+            true => command.env("ROSEMARY_COMMAND_KEY", "ctrl"),
+            false => command.env("ROSEMARY_CONTROL_EDIT_KEYS", "1"),
+        };
     }
     if config.mangohud {
         command.env("MANGOHUD", "1");
