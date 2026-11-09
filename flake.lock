@@ -46,16 +46,16 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1793928076,
-        "narHash": "sha256-NDeJvwm9AQjIdu9kUcgexh31LsJGlGjRZoplZDjb+H8=",
+        "lastModified": 1794236698,
+        "narHash": "sha256-7qzinuDJHv2uTItsO+teLns26lKhebmh6bzZKZlri7U=",
         "owner": "nunreasonable",
         "repo": "rosemary",
-        "rev": "6b92069c558c4da79a1d4ecde930619f3d6e7ce6",
+        "rev": "5e6d33e22a8d7c8320e28aa4a463bbde0686deab",
         "type": "github"
       },
       "original": {
         "owner": "nunreasonable",
-        "ref": "ginrose-0.3.3",
+        "ref": "ginrose-0.3.6",
         "repo": "rosemary",
         "type": "github"
       }
