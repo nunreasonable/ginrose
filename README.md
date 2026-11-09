@@ -49,11 +49,18 @@ Roblox reads local settings from.
 
 ## Install
 
-Ginrose is on Flathub:
+Ginrose is not on Flathub yet. Install the official Flatpak from
+[ginrose-flatpak](https://github.com/nunreasonable/ginrose-flatpak), which
+needs [Flatpak](https://flatpak.org/setup/) and an x86_64 computer:
 
 ```sh
-flatpak install flathub me.daeese.apps.ginrose
+curl -fsSL https://raw.githubusercontent.com/nunreasonable/ginrose-flatpak/main/install.sh | sh
 ```
+
+The script downloads the latest release, checks it against `SHA256SUMS` and
+installs Ginrose for your user, without root. To install by hand, update or
+uninstall, see the
+[ginrose-flatpak README](https://github.com/nunreasonable/ginrose-flatpak#install).
 
 The Flatpak comes with Ginrose's build of
 [Rosemary 0.5.0](https://github.com/microlift/rosemary/releases/tag/v0.5.0),
