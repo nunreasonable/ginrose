@@ -2,7 +2,7 @@
 
 pkgbase=ginrose
 pkgname=(ginrose ginrose-studio)
-pkgver=0.3.4
+pkgver=0.3.5
 pkgrel=1
 pkgdesc="Roblox and Roblox Studio launchers for Linux, built around Rosemary"
 arch=(x86_64)
