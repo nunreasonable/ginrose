@@ -111,13 +111,11 @@ pub fn agent() -> ureq::Agent {
         .into()
 }
 
-/// For Studio's download, about 600 MB: a time limit on the whole request
-/// would cut it off on an ordinary connection, so only connecting and the
-/// answer starting are timed.
-fn download_agent() -> ureq::Agent {
-    if !flavor::is_studio() {
-        return agent();
-    }
+/// For large downloads - the Roblox client is about 150 MB, Studio about
+/// 600 MB, Rosemary about 30 MB: a time limit on the whole request cuts them
+/// off on an ordinary connection, so only connecting and the answer starting
+/// are timed.
+pub fn download_agent() -> ureq::Agent {
     let limit = Some(std::time::Duration::from_secs(30));
     ureq::Agent::config_builder()
         .timeout_connect(limit)

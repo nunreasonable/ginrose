@@ -24,7 +24,7 @@ pub fn download(source: Source, progress: roblox::Progress) -> Result<std::path:
         Source::Official => (OFFICIAL, "-x86_64.AppImage", "Rosemary"),
         Source::Ginrose => (GINROSE, FORK_ASSET, "Ginrose's Rosemary"),
     };
-    let agent = roblox::agent();
+    let agent = roblox::download_agent();
     progress(&format!("Looking up the latest {what}"), None);
     let release: Value = agent
         .get(api)
