@@ -46,7 +46,7 @@ Roblox reads local settings from.
   missing NVIDIA Vulkan driver, and a video wallpaper (mpvpaper) that keeps
   decoding behind the game.
 - **Copy and paste with Ctrl.** The Mac client expects Command, which most
-  Linux desktops keep for themselves (needs Ginrose's Rosemary build, below).
+  Linux desktops keep for themselves.
 - Opens the **Play buttons on roblox.com**, and gives the Roblox window its
   icon in taskbars and docks.
 
@@ -65,16 +65,17 @@ installs Ginrose for your user, without root. To install by hand, update or
 uninstall, see the
 [ginrose-flatpak README](https://github.com/nunreasonable/ginrose-flatpak#install).
 
-The Flatpak comes with Ginrose's build of
-[Rosemary 0.5.0](https://github.com/microlift/rosemary/releases/tag/v0.5.0),
-which has microphone input for voice chat and lets Ctrl stand in for Command in
-copy and paste, plus fixes that are not in a release yet: one
+The Flatpak comes with Ginrose's build of Rosemary: upstream
+[main](https://github.com/microlift/rosemary) plus Ginrose's open pull
+requests. Upstream already has microphone input for voice chat and lets Ctrl
+stand in for Command in copy and paste. On top of that, one change
 [keeps the mouse cursor in sync](https://github.com/microlift/rosemary/pull/165)
-after switching windows, and others let drag and drop work between an app's
-own windows and keep an idle app from polling its run loop every 2 ms. It also
-plays video in experiences: H.264 is decoded on the GPU (Vulkan, VA-API or
-CUDA) and the AAC sound on the CPU, both through FFmpeg 8, which the Flatpak
-gets from the runtime's codecs extension. Without a usable FFmpeg, video stays
+after switching windows, others let drag and drop work between an app's own
+windows, keep an idle app from polling its run loop every 2 ms and draw the
+server location notice over the game. It also plays video in experiences:
+H.264 is decoded on the GPU (Vulkan, VA-API or CUDA) and the AAC sound on the
+CPU, both through FFmpeg 8, which the Flatpak gets from the runtime's codecs
+extension. Without a usable FFmpeg, video stays
 blank instead of crashing. The setup downloads Roblox on the first run.
 
 To have it open the Play buttons on roblox.com when another app already does,
