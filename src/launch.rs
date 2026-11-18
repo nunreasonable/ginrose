@@ -278,8 +278,24 @@ pub struct Launched {
     pub log: PathBuf,
 }
 
+/// Rosemary, started so that a crashing helper leaves no core file. FreeBSD
+/// writes `%N.core` into the process's working folder, which for Roblox's
+/// helpers is inside the signed bundle, and the next launch then refuses it.
+fn rosemary_command(rosemary: &Path) -> Command {
+    if cfg!(target_os = "freebsd") {
+        let mut command = Command::new("/bin/sh");
+        command
+            .arg("-c")
+            .arg("ulimit -c 0; exec \"$0\" \"$@\"")
+            .arg(rosemary);
+        command
+    } else {
+        Command::new(rosemary)
+    }
+}
+
 pub fn spawn(config: &Config, prepared: &Prepared, uri: Option<&str>) -> Result<Launched, String> {
-    let mut command = Command::new(&prepared.rosemary);
+    let mut command = rosemary_command(&prepared.rosemary);
     command.arg("run");
     if flavor::is_studio() {
         let (new_instance, args) = studio::arguments(&studio::target(uri), &config.launch_args);
