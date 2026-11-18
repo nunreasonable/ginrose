@@ -11,7 +11,10 @@ use crate::{paths, roblox};
 const OFFICIAL: &str = "https://api.github.com/repos/microlift/rosemary/releases/latest";
 const GINROSE: &str = "https://api.github.com/repos/nunreasonable/ginrose-flatpak/releases/latest";
 /// Ginrose's build as a release asset: a plain binary, not an AppImage.
+#[cfg(not(target_os = "freebsd"))]
 const FORK_ASSET: &str = "rosemary-ginrose-x86_64";
+#[cfg(target_os = "freebsd")]
+const FORK_ASSET: &str = "rosemary-ginrose-x86_64-freebsd";
 
 #[derive(Clone, Copy)]
 pub enum Source {

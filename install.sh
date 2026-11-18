@@ -19,18 +19,27 @@ BIN_DIR="${XDG_BIN_HOME:-$HOME/.local/bin}"
 say() { printf '\033[1;35m::\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m!!\033[0m %s\n' "$*" >&2; exit 1; }
 
-[ "$(uname -s)" = Linux ] || die "Ginrose runs on Linux."
-[ "$(uname -m)" = x86_64 ] || die "Ginrose is built for x86_64 for now."
+# Release files for FreeBSD end in -freebsd; Linux's have no suffix.
+case "$(uname -s)" in
+    Linux) os= libs="ldconfig -p" ;;
+    FreeBSD) os=-freebsd libs="ldconfig -r" ;;
+    *) die "Ginrose runs on Linux and FreeBSD." ;;
+esac
+case "$(uname -m)" in
+    x86_64 | amd64) ;;
+    *) die "Ginrose is built for x86_64 for now." ;;
+esac
 
 missing=""
 for lib in libgtk-4.so.1 libadwaita-1.so.0; do
-    ldconfig -p 2>/dev/null | grep -q "$lib" || missing="$missing $lib"
+    $libs 2>/dev/null | grep -q "$lib" || missing="$missing $lib"
 done
 if [ -n "$missing" ]; then
     say "Missing:$missing"
     say "Fedora: sudo dnf install gtk4 libadwaita"
     say "Debian/Ubuntu: sudo apt install libgtk-4-1 libadwaita-1-0"
     say "Arch: sudo pacman -S gtk4 libadwaita"
+    say "FreeBSD: sudo pkg install gtk4 libadwaita"
     die "Install those, then run this again."
 fi
 
@@ -66,7 +75,7 @@ else
     trap 'rm -rf "$tmp"' EXIT
     say "Finding the latest release"
     # A digit after the name, so Ginrose's never matches Ginrose Studio's.
-    url=$(latest "$name-[0-9][^\"]*x86_64\\.tar\\.gz")
+    url=$(latest "$name-[0-9][^\"]*x86_64$os\\.tar\\.gz")
     [ -n "$url" ] || die "No $name release found for $REPO."
     say "Downloading $(basename "$url")"
     curl -fL --progress-bar "$url" -o "$tmp/$name.tar.gz"
@@ -79,7 +88,7 @@ fi
 
 if [ "$with_rosemary" = 1 ]; then
     command -v curl >/dev/null || die "curl is needed to download Rosemary."
-    url=$(latest 'rosemary-ginrose-x86_64')
+    url=$(latest "rosemary-ginrose-x86_64$os")
     [ -n "$url" ] || die "No Rosemary build in the latest release of $REPO."
     say "Downloading Ginrose's Rosemary"
     curl -fL --progress-bar "$url" -o "$DATA_DIR/rosemary/rosemary.new"
