@@ -124,6 +124,12 @@ ginrose rosemary PATH   use a Rosemary binary you built
 ginrose status          what is installed and what would get in the way
 ```
 
+An account Roblox has put on a deployment channel other than LIVE is
+force-updated to that channel's build, which a LIVE install can't do inside
+Rosemary. Write the channel's name, as Roblox's logs show it, to
+`~/.config/ginrose/channel` (or set `GINROSE_CHANNEL`), then run
+`ginrose update`. Remove it once the account is back on LIVE.
+
 ## Ginrose Studio
 
 <p align="center">
