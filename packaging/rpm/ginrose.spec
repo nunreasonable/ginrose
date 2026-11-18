@@ -7,7 +7,7 @@
 %global debug_package %{nil}
 
 Name:           ginrose
-Version:        0.3.8
+Version:        0.3.9
 Release:        1%{?dist}
 Summary:        Roblox launcher for Linux, built around Rosemary
 # Ginrose is GPL-3.0-or-later; the rest are the statically linked crates'.
@@ -101,6 +101,9 @@ rm -r %{buildroot}%{_datadir}/licenses
 %{_datadir}/metainfo/me.daeese.apps.ginrose.studio.metainfo.xml
 
 %changelog
+* Wed Nov 18 2026 nunreasonable <rafaelpasquarella@gmail.com> - 0.3.9-1
+- Rosemary reuses FreeBSD region counts instead of walking the map each time
+
 * Wed Nov 18 2026 nunreasonable <rafaelpasquarella@gmail.com> - 0.3.8-1
 - Rosemary moves to the latest upstream main
 
