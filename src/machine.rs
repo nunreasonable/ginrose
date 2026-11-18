@@ -43,6 +43,7 @@ pub fn nvidia_icd() -> Option<PathBuf> {
         "/usr/share/vulkan/icd.d/nvidia_icd.x86_64.json",
         "/usr/share/vulkan/icd.d/nvidia_icd.json",
         "/etc/vulkan/icd.d/nvidia_icd.json",
+        "/usr/local/share/vulkan/icd.d/nvidia_icd.json",
     ]
     .into_iter()
     .map(PathBuf::from)
