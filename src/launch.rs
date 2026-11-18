@@ -19,26 +19,17 @@ use crate::{flags, flavor, integrity, machine, paths, roblox, settings, studio};
 fn ours() -> Vec<(i32, String)> {
     let host = paths::versions_dir().to_string_lossy().into_owned();
     let guest = format!("/Volumes/Host{host}");
-    let Ok(entries) = std::fs::read_dir("/proc") else {
-        return Vec::new();
-    };
-    entries
-        .flatten()
-        .filter_map(|e| {
-            let pid: i32 = e.file_name().to_str()?.parse().ok()?;
-            let cmdline = std::fs::read(e.path().join("cmdline")).ok()?;
-            let args: Vec<String> = cmdline
-                .split(|b| *b == 0)
-                .map(|a| String::from_utf8_lossy(a).into_owned())
-                .collect();
-            let build = args.iter().find_map(|a| {
+    crate::process::all()
+        .into_iter()
+        .filter_map(|p| {
+            let build = p.args.iter().find_map(|a| {
                 let rest = a
                     .strip_prefix(&guest)
                     .or_else(|| a.strip_prefix(&host))?
                     .trim_start_matches('/');
                 Some(rest.split('/').next()?.to_string())
             })?;
-            Some((pid, build))
+            Some((p.pid, build))
         })
         .filter(|(pid, _)| *pid as u32 != std::process::id())
         .collect()
