@@ -51,12 +51,7 @@ pub fn nvidia_icd() -> Option<PathBuf> {
 }
 
 fn process_running(name: &str) -> bool {
-    let Ok(entries) = std::fs::read_dir("/proc") else {
-        return false;
-    };
-    entries
-        .flatten()
-        .any(|e| read(&e.path().join("comm")) == name)
+    crate::process::all().iter().any(|p| p.name == name)
 }
 
 /// Add the Rosemary binary's name to mpvpaper's pause list, so a video
