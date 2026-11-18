@@ -92,6 +92,22 @@ and [`packaging/`](packaging) has recipes that build from source for Arch,
 Fedora and openSUSE, NixOS and Gentoo. See
 [packaging/README.md](packaging/README.md) for what each one needs.
 
+### FreeBSD
+
+Flatpak doesn't run on FreeBSD, so Ginrose is installed natively there. Each
+release has FreeBSD builds of Ginrose and of Ginrose's Rosemary, the files whose
+names end in `-freebsd`. Install them for your user:
+
+```sh
+sudo pkg install gtk4 libadwaita sdl3 curl mesa-libs
+fetch -o - https://raw.githubusercontent.com/nunreasonable/ginrose/main/install.sh | sh -s -- --with-rosemary
+```
+
+They're built on the oldest FreeBSD release still supported, and run on that
+release and later ones. Vulkan needs the GPU's driver: `nvidia-driver` with an
+NVIDIA card, or `mesa-dri` with AMD or Intel. FreeBSD support is newer than
+Linux's, both in Rosemary and in Ginrose, so expect rough edges.
+
 ### Building the Flatpak
 
 ```sh
