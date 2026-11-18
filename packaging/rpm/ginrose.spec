@@ -7,7 +7,7 @@
 %global debug_package %{nil}
 
 Name:           ginrose
-Version:        0.3.7
+Version:        0.3.8
 Release:        1%{?dist}
 Summary:        Roblox launcher for Linux, built around Rosemary
 # Ginrose is GPL-3.0-or-later; the rest are the statically linked crates'.
@@ -101,6 +101,9 @@ rm -r %{buildroot}%{_datadir}/licenses
 %{_datadir}/metainfo/me.daeese.apps.ginrose.studio.metainfo.xml
 
 %changelog
+* Wed Nov 18 2026 nunreasonable <rafaelpasquarella@gmail.com> - 0.3.8-1
+- Rosemary moves to the latest upstream main
+
 * Fri Nov 13 2026 nunreasonable <rafaelpasquarella@gmail.com> - 0.3.7-1
 - Studio drags stay with the view they started in
 - Ctrl acts as Command in every Studio shortcut
