@@ -207,8 +207,9 @@ pub fn window(app: &adw::Application, finished: impl Fn() + 'static) {
         inner.append(widget);
     }
     // An AppImage cannot run inside the Flatpak, and the bundled build is the
-    // one to download anyway.
-    if flatpak {
+    // one to download anyway. Both downloads are Linux builds, which FreeBSD
+    // cannot run: there Rosemary is built from source and chosen.
+    if flatpak || cfg!(target_os = "freebsd") {
         fetch.set_visible(false);
         fetch_fork.set_visible(false);
     }
