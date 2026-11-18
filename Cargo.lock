@@ -449,6 +449,7 @@ dependencies = [
  "der",
  "gtk4",
  "libadwaita",
+ "libc",
  "plist",
  "regex",
  "rsa",

@@ -21,6 +21,9 @@ sha2 = "0.10"
 plist = "1"
 rsa = { version = "0.9", default-features = false, features = ["std", "sha2"] }
 
+[target.'cfg(target_os = "freebsd")'.dependencies]
+libc = "0.2"
+
 [profile.release]
 lto = true
 codegen-units = 1

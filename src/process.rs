@@ -46,41 +46,18 @@ pub fn all() -> Vec<Process> {
 
 #[cfg(target_os = "freebsd")]
 mod freebsd {
-    use std::ffi::{c_int, c_uint, c_void};
-
     use super::{Process, split_args};
-
-    unsafe extern "C" {
-        fn sysctl(
-            name: *const c_int,
-            namelen: c_uint,
-            oldp: *mut c_void,
-            oldlenp: *mut usize,
-            newp: *const c_void,
-            newlen: usize,
-        ) -> c_int;
-    }
-
-    const CTL_KERN: c_int = 1;
-    const KERN_PROC: c_int = 14;
-    const KERN_PROC_ARGS: c_int = 7;
-    const KERN_PROC_PROC: c_int = 8;
-    /// Where `ki_pid` and `ki_comm` are in `struct kinfo_proc`, whose layout
-    /// FreeBSD keeps fixed (`KINFO_PROC_SIZE`); `ki_comm` holds `COMMLEN` + 1
-    /// bytes.
-    const KI_PID: usize = 72;
-    const KI_COMM: usize = 447;
-    const COMM_SIZE: usize = 20;
 
     /// What `sysctl` answers for `mib`, retried while what it answers grows
     /// between asking for the size and reading it.
-    fn read(mib: &[c_int]) -> Option<Vec<u8>> {
+    fn read(mib: &[libc::c_int]) -> Option<Vec<u8>> {
         for _ in 0..4 {
             let mut len = 0usize;
+            // SAFETY: a size query: no buffer, and `len` is live.
             let rc = unsafe {
-                sysctl(
+                libc::sysctl(
                     mib.as_ptr(),
-                    mib.len() as c_uint,
+                    mib.len() as libc::c_uint,
                     std::ptr::null_mut(),
                     &mut len,
                     std::ptr::null(),
@@ -93,10 +70,11 @@ mod freebsd {
             // Room for processes started in between.
             len += len / 8;
             let mut buf = vec![0u8; len];
+            // SAFETY: a buffer of `len` bytes, which `len` says.
             let rc = unsafe {
-                sysctl(
+                libc::sysctl(
                     mib.as_ptr(),
-                    mib.len() as c_uint,
+                    mib.len() as libc::c_uint,
                     buf.as_mut_ptr().cast(),
                     &mut len,
                     std::ptr::null(),
@@ -107,47 +85,55 @@ mod freebsd {
                 buf.truncate(len);
                 return Some(buf);
             }
-            if std::io::Error::last_os_error().raw_os_error() != Some(12) {
+            if std::io::Error::last_os_error().raw_os_error() != Some(libc::ENOMEM) {
                 return None;
             }
         }
         None
     }
 
-    fn int_at(buf: &[u8], at: usize) -> Option<i32> {
-        Some(i32::from_ne_bytes(buf.get(at..at + 4)?.try_into().ok()?))
-    }
-
     pub fn all() -> Vec<Process> {
-        let Some(table) = read(&[CTL_KERN, KERN_PROC, KERN_PROC_PROC, 0]) else {
+        let mib = [libc::CTL_KERN, libc::KERN_PROC, libc::KERN_PROC_PROC, 0];
+        let Some(table) = read(&mib) else {
             return Vec::new();
         };
-        let mut processes = Vec::new();
-        let mut at = 0;
-        // Each entry starts with its own size, `ki_structsize`.
-        while let Some(size) = int_at(&table, at) {
-            let size = size as usize;
-            let Some(entry) = table.get(at..at + size).filter(|_| size > KI_COMM) else {
-                break;
-            };
-            at += size;
-            let Some(pid) = int_at(entry, KI_PID) else {
-                continue;
-            };
-            let comm = &entry[KI_COMM..(KI_COMM + COMM_SIZE).min(size)];
-            let comm = comm.split(|b| *b == 0).next().unwrap_or_default();
-            // A process that has exited, or is another user's and hidden by
-            // security.bsd.see_other_uids, has no arguments to read.
-            let Some(args) = read(&[CTL_KERN, KERN_PROC, KERN_PROC_ARGS, pid]) else {
-                continue;
-            };
-            processes.push(Process {
-                pid,
-                name: String::from_utf8_lossy(comm).into_owned(),
-                args: split_args(&args),
-            });
+        let size = std::mem::size_of::<libc::kinfo_proc>();
+        // Each entry starts with its own size; one that is not the struct's
+        // means a kernel this was not built for.
+        let first = table
+            .get(..4)
+            .map(|b| i32::from_ne_bytes(b.try_into().unwrap()));
+        if first.is_some_and(|first| first as usize != size) {
+            return Vec::new();
         }
-        processes
+        table
+            .chunks_exact(size)
+            .filter_map(|entry| {
+                // SAFETY: `size` bytes the kernel wrote as a `kinfo_proc`,
+                // which may not be aligned in the buffer.
+                let proc = unsafe { entry.as_ptr().cast::<libc::kinfo_proc>().read_unaligned() };
+                // A process that has exited, or is another user's and hidden
+                // by security.bsd.see_other_uids, has no arguments to read.
+                let mib = [
+                    libc::CTL_KERN,
+                    libc::KERN_PROC,
+                    libc::KERN_PROC_ARGS,
+                    proc.ki_pid,
+                ];
+                let args = read(&mib)?;
+                let comm: Vec<u8> = proc
+                    .ki_comm
+                    .iter()
+                    .take_while(|c| **c != 0)
+                    .map(|c| *c as u8)
+                    .collect();
+                Some(Process {
+                    pid: proc.ki_pid,
+                    name: String::from_utf8_lossy(&comm).into_owned(),
+                    args: split_args(&args),
+                })
+            })
+            .collect()
     }
 }
 
