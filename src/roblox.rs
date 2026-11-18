@@ -57,9 +57,27 @@ fn layout() -> Layout {
     layout_for(flavor::current())
 }
 
+/// The Roblox deployment channel the account is on, when it is not LIVE: from
+/// `GINROSE_CHANNEL`, else the `channel` file in the config folder. An account
+/// on another channel is force-updated to that channel's build at launch.
+pub fn deploy_channel() -> Option<String> {
+    let name = std::env::var("GINROSE_CHANNEL")
+        .ok()
+        .or_else(|| std::fs::read_to_string(paths::config_dir().join("channel")).ok())?;
+    let name = name.trim();
+    (!name.is_empty() && !name.eq_ignore_ascii_case("live")).then(|| name.to_string())
+}
+
 /// Roblox's version service for a flavor, then its fallback.
 pub fn version_urls_for(flavor: Flavor) -> [String; 2] {
-    let channel = layout_for(flavor).channel;
+    version_urls_on(flavor, deploy_channel().as_deref())
+}
+
+fn version_urls_on(flavor: Flavor, deploy: Option<&str>) -> [String; 2] {
+    let mut channel = layout_for(flavor).channel.to_string();
+    if let Some(deploy) = deploy {
+        channel = format!("{channel}/channel/{deploy}");
+    }
     [
         format!("https://clientsettingscdn.roblox.com/v2/client-version/{channel}"),
         format!("https://clientsettings.roblox.com/v2/client-version/{channel}"),
@@ -68,7 +86,16 @@ pub fn version_urls_for(flavor: Flavor) -> [String; 2] {
 
 /// Where a build's zip is on one of the CDN's hosts.
 pub fn download_url_for(flavor: Flavor, host: &str, upload: &str) -> String {
-    format!("{host}/mac/{upload}-{}", layout_for(flavor).zip)
+    download_url_on(flavor, host, upload, deploy_channel().is_some())
+}
+
+/// Builds of every channel other than LIVE are under `channel/common`.
+fn download_url_on(flavor: Flavor, host: &str, upload: &str, on_channel: bool) -> String {
+    let dir = match on_channel {
+        true => "channel/common/mac",
+        false => "mac",
+    };
+    format!("{host}/{dir}/{upload}-{}", layout_for(flavor).zip)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -142,8 +169,16 @@ pub fn latest() -> Result<Build, String> {
             Err(e) => failures.push(format!("{url}: {e}")),
         }
     }
+    // Roblox refuses a channel's version to an account no longer on it.
+    let channel = match deploy_channel() {
+        Some(name) => format!(
+            "; if the account has left the {name} channel, remove {}",
+            paths::config_dir().join("channel").display()
+        ),
+        None => String::new(),
+    };
     Err(format!(
-        "could not ask Roblox for the current version{} ({})",
+        "could not ask Roblox for the current version{} ({}){channel}",
         match flavor::current() {
             Flavor::Player => "",
             Flavor::Studio => " of Roblox Studio",
@@ -424,22 +459,22 @@ mod tests {
     #[test]
     fn each_flavor_downloads_its_own_client() {
         assert_eq!(
-            version_urls_for(Flavor::Player)[0],
+            version_urls_on(Flavor::Player, None)[0],
             "https://clientsettingscdn.roblox.com/v2/client-version/MacPlayer"
         );
         assert_eq!(
-            version_urls_for(Flavor::Studio),
+            version_urls_on(Flavor::Studio, None),
             [
                 "https://clientsettingscdn.roblox.com/v2/client-version/MacStudio",
                 "https://clientsettings.roblox.com/v2/client-version/MacStudio",
             ]
         );
         assert_eq!(
-            download_url_for(Flavor::Player, CDN[0], "version-212bac6bdccd4673"),
+            download_url_on(Flavor::Player, CDN[0], "version-212bac6bdccd4673", false),
             "https://setup.rbxcdn.com/mac/version-212bac6bdccd4673-RobloxPlayer.zip"
         );
         assert_eq!(
-            download_url_for(Flavor::Studio, CDN[0], "version-a7baca1cb08a4943"),
+            download_url_on(Flavor::Studio, CDN[0], "version-a7baca1cb08a4943", false),
             "https://setup.rbxcdn.com/mac/version-a7baca1cb08a4943-RobloxStudioApp.zip"
         );
         let player = layout_for(Flavor::Player);
@@ -451,6 +486,18 @@ mod tests {
         assert_eq!(
             (studio.bundle_in_zip, studio.app, studio.executable),
             ("RobloxStudio.app", "RobloxStudio.app", "RobloxStudio")
+        );
+    }
+
+    #[test]
+    fn a_deploy_channel_has_its_own_version_and_zip() {
+        assert_eq!(
+            version_urls_on(Flavor::Player, Some("zbisect012"))[0],
+            "https://clientsettingscdn.roblox.com/v2/client-version/MacPlayer/channel/zbisect012"
+        );
+        assert_eq!(
+            download_url_on(Flavor::Player, CDN[0], "version-f72abf01b4134489", true),
+            "https://setup.rbxcdn.com/channel/common/mac/version-f72abf01b4134489-RobloxPlayer.zip"
         );
     }
 }
