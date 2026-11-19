@@ -103,6 +103,7 @@ rm -r %{buildroot}%{_datadir}/licenses
 %changelog
 * Wed Nov 18 2026 nunreasonable <rafaelpasquarella@gmail.com> - 0.3.9-1
 - Rosemary reuses FreeBSD region counts instead of walking the map each time
+- FreeBSD builds of Ginrose and its Rosemary, which runs on FreeBSD 14 and 15
 
 * Wed Nov 18 2026 nunreasonable <rafaelpasquarella@gmail.com> - 0.3.8-1
 - Rosemary moves to the latest upstream main
