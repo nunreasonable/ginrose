@@ -54,13 +54,19 @@ case "$name" in
 esac
 
 share="$destdir$prefix/share"
-install -Dm755 "$binary" "$destdir$prefix/bin/$name"
+# install -D makes the leading folders only with GNU install; BSD install's -D
+# names a destination root instead.
+put() {
+    mkdir -p "$(dirname "$3")"
+    install -m "$1" "$2" "$3"
+}
+put 755 "$binary" "$destdir$prefix/bin/$name"
 for entry in $entries; do
-    install -Dm644 "$entries_dir/$entry" "$share/applications/$entry"
+    put 644 "$entries_dir/$entry" "$share/applications/$entry"
 done
 for icon in "$icons_dir"/*.png; do
     size=$(basename "$icon" .png)
-    install -Dm644 "$icon" "$share/icons/hicolor/${size}x${size}/apps/$id.png"
+    put 644 "$icon" "$share/icons/hicolor/${size}x${size}/apps/$id.png"
 done
-install -Dm644 "$metainfo_dir/$id.metainfo.xml" "$share/metainfo/$id.metainfo.xml"
-install -Dm644 "$license" "$share/licenses/$name/LICENSE"
+put 644 "$metainfo_dir/$id.metainfo.xml" "$share/metainfo/$id.metainfo.xml"
+put 644 "$license" "$share/licenses/$name/LICENSE"
