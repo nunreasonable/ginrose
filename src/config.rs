@@ -118,6 +118,8 @@ pub struct Discord {
     pub game_status: bool,
     /// An art asset key uploaded to the Discord application, shown small.
     pub small_image: String,
+    /// Name the operating system beside Ginrose's mark.
+    pub show_os: bool,
 }
 
 impl Discord {
@@ -138,6 +140,7 @@ impl Default for Discord {
             buttons: true,
             game_status: true,
             small_image: "ginrose".into(),
+            show_os: false,
         }
     }
 }
