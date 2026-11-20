@@ -581,6 +581,16 @@ fn settings_page(config: &Shared, toasts: &adw::ToastOverlay) -> gtk::Widget {
     ));
     let shared = config.clone();
     discord.add(&switch_row(
+        "Show the operating system",
+        "Over Ginrose's mark, such as \"Ginrose on Fedora Linux\"",
+        c.discord.show_os,
+        move |on| {
+            shared.borrow_mut().discord.show_os = on;
+            save(&shared);
+        },
+    ));
+    let shared = config.clone();
+    discord.add(&switch_row(
         "Let games set their status",
         "BloxstrapRPC messages from the game",
         c.discord.game_status,

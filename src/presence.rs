@@ -158,6 +158,29 @@ fn clip(text: &str, most: usize) -> String {
     text
 }
 
+/// The distribution's own name, or the kernel's where it has none. Inside the
+/// Flatpak, /etc/os-release is the runtime's and the host's is under /run/host.
+fn os_name() -> String {
+    [
+        "/run/host/os-release",
+        "/etc/os-release",
+        "/usr/lib/os-release",
+    ]
+    .iter()
+    .find_map(|path| os_release_name(&std::fs::read_to_string(path).ok()?))
+    .unwrap_or_else(|| match std::env::consts::OS {
+        "freebsd" => "FreeBSD".into(),
+        "linux" => "Linux".into(),
+        other => other.into(),
+    })
+}
+
+fn os_release_name(text: &str) -> Option<String> {
+    let name = text.lines().find_map(|line| line.strip_prefix("NAME="))?;
+    let name = name.trim().trim_matches(['"', '\'']);
+    (!name.is_empty()).then(|| name.to_string())
+}
+
 fn activity(settings: &config::Discord, game: &Game, custom: &Custom) -> Value {
     let named = settings.show_game && !game.name.is_empty();
     let details = custom.details.clone().unwrap_or_else(|| match named {
@@ -173,7 +196,11 @@ fn activity(settings: &config::Discord, game: &Game, custom: &Custom) -> Value {
         (named && !game.icon.is_empty()).then(|| (game.icon.clone(), game.name.clone()))
     });
     let small = custom.small.clone().or_else(|| {
-        (!settings.small_image.is_empty()).then(|| (settings.small_image.clone(), "Ginrose".into()))
+        let text = match settings.show_os {
+            true => format!("Ginrose on {}", os_name()),
+            false => "Ginrose".into(),
+        };
+        (!settings.small_image.is_empty()).then(|| (settings.small_image.clone(), text))
     });
     // Without a game to show, the mark takes the big slot rather than leaving
     // it empty beside a small copy of itself.
@@ -431,5 +458,28 @@ mod tests {
         assert_eq!(out["buttons"][0]["url"], "https://www.roblox.com/games/1");
         assert_eq!(out["buttons"][1]["label"], "Ginrose");
         assert_eq!(out["status_display_type"], 2);
+        assert_eq!(out["assets"]["small_text"], "Ginrose");
+    }
+
+    #[test]
+    fn the_os_is_named_only_when_asked() {
+        let settings = config::Discord {
+            show_os: true,
+            ..config::Discord::default()
+        };
+        let out = activity(&settings, &Game::default(), &Custom::default());
+        let text = out["assets"]["large_text"].as_str().unwrap();
+        assert_eq!(text, format!("Ginrose on {}", os_name()));
+    }
+
+    #[test]
+    fn the_os_name_comes_from_os_release() {
+        let text = "ID=fedora\nNAME=\"Fedora Linux\"\nVERSION_ID=43\n";
+        assert_eq!(os_release_name(text).as_deref(), Some("Fedora Linux"));
+        assert_eq!(
+            os_release_name("NAME=GhostBSD\n").as_deref(),
+            Some("GhostBSD")
+        );
+        assert_eq!(os_release_name("ID=x\n"), None);
     }
 }
