@@ -158,16 +158,21 @@ fn clip(text: &str, most: usize) -> String {
     text
 }
 
-/// The distribution's own name, or the kernel's where it has none.
+/// The distribution's own name, or the kernel's where it has none. Inside the
+/// Flatpak, /etc/os-release is the runtime's and the host's is under /run/host.
 fn os_name() -> String {
-    ["/etc/os-release", "/usr/lib/os-release"]
-        .iter()
-        .find_map(|path| os_release_name(&std::fs::read_to_string(path).ok()?))
-        .unwrap_or_else(|| match std::env::consts::OS {
-            "freebsd" => "FreeBSD".into(),
-            "linux" => "Linux".into(),
-            other => other.into(),
-        })
+    [
+        "/run/host/os-release",
+        "/etc/os-release",
+        "/usr/lib/os-release",
+    ]
+    .iter()
+    .find_map(|path| os_release_name(&std::fs::read_to_string(path).ok()?))
+    .unwrap_or_else(|| match std::env::consts::OS {
+        "freebsd" => "FreeBSD".into(),
+        "linux" => "Linux".into(),
+        other => other.into(),
+    })
 }
 
 fn os_release_name(text: &str) -> Option<String> {
