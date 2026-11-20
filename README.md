@@ -99,13 +99,15 @@ release has FreeBSD builds of Ginrose and of Ginrose's Rosemary, the files whose
 names end in `-freebsd`. Install them for your user:
 
 ```sh
-sudo pkg install gtk4 libadwaita sdl3 curl mesa-libs
+sudo pkg install gtk4 libadwaita sdl3 curl mesa-libs dejavu
 fetch -o - https://raw.githubusercontent.com/nunreasonable/ginrose/main/install.sh | sh -s -- --with-rosemary
 ```
 
 They're built on the oldest FreeBSD release still supported, and run on that
 release and later ones. Vulkan needs the GPU's driver: `nvidia-driver` with an
-NVIDIA card, or `mesa-dri` with AMD or Intel. FreeBSD support is newer than
+NVIDIA card, or `mesa-dri` with AMD or Intel. GTK needs at least one font,
+which FreeBSD's `gtk4` package doesn't bring: without one, Ginrose's window has
+no text at all (`dejavu` above is enough). FreeBSD support is newer than
 Linux's, both in Rosemary and in Ginrose, so expect rough edges.
 
 ### Building the Flatpak

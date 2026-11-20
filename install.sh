@@ -34,12 +34,16 @@ missing=""
 for lib in libgtk-4.so.1 libadwaita-1.so.0; do
     $libs 2>/dev/null | grep -q "$lib" || missing="$missing $lib"
 done
+# FreeBSD's GTK package brings no font, and without one every label is blank.
+if [ "$os" = -freebsd ] && [ -z "$(fc-list 2>/dev/null | head -n1)" ]; then
+    missing="$missing a font"
+fi
 if [ -n "$missing" ]; then
     say "Missing:$missing"
     say "Fedora: sudo dnf install gtk4 libadwaita"
     say "Debian/Ubuntu: sudo apt install libgtk-4-1 libadwaita-1-0"
     say "Arch: sudo pacman -S gtk4 libadwaita"
-    say "FreeBSD: sudo pkg install gtk4 libadwaita"
+    say "FreeBSD: sudo pkg install gtk4 libadwaita dejavu"
     die "Install those, then run this again."
 fi
 
