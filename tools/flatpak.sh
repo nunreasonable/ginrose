@@ -33,7 +33,8 @@ if [ "${1:-}" = --studio ]; then
     shift
 fi
 rosemary=${1:?usage: tools/flatpak.sh [--studio] path/to/rosemary [--install]}
-version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
+# AA.X.Y.Z: the year, then major, features and fixes. Cargo.toml holds AA.X.Y.
+version=$(cat VERSION)
 if [ "$studio" = 1 ]; then
     id=me.daeese.apps.ginrose.studio
     name=ginrose-studio

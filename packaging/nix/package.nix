@@ -21,7 +21,7 @@ assert lib.elem flavor [
 
 rustPlatform.buildRustPackage {
   pname = flavor;
-  version = (lib.importTOML ../../Cargo.toml).package.version;
+  version = lib.trim (builtins.readFile ../../VERSION);
 
   src = lib.cleanSourceWith {
     src = ../..;

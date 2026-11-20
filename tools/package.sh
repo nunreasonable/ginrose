@@ -12,7 +12,8 @@
 # with the fork's link-time optimised profile.
 set -eu
 cd "$(dirname "$0")/.."
-version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
+# AA.X.Y.Z: the year, then major, features and fixes. Cargo.toml holds AA.X.Y.
+version=$(cat VERSION)
 cargo build --release
 case "$(uname -s)" in
     FreeBSD) os=-freebsd ;;

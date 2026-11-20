@@ -13,7 +13,8 @@
 # Rosemary is not included; Ginrose uses one on PATH or downloads one.
 set -eu
 cd "$(dirname "$0")/.."
-version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
+# AA.X.Y.Z: the year, then major, features and fixes. Cargo.toml holds AA.X.Y.
+version=$(cat VERSION)
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct)}"
 maintainer="nunreasonable <rafaelpasquarella@gmail.com>"
 homepage="https://github.com/nunreasonable/ginrose"
