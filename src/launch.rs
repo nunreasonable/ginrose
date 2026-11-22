@@ -76,7 +76,7 @@ pub fn repair(progress: roblox::Progress) -> Result<roblox::Build, String> {
 }
 
 fn unsafe_kill(pid: i32, signal: i32) {
-    let _ = Command::new("kill")
+    let _ = crate::process::command("kill")
         .arg(format!("-{signal}"))
         .arg(pid.to_string())
         .stderr(Stdio::null())
