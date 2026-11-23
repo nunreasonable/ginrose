@@ -6,7 +6,7 @@
     # Ginrose's build of Rosemary, as the Flatpaks ship. Point it at
     # github:microlift/rosemary for the upstream one.
     rosemary = {
-      url = "github:nunreasonable/rosemary?ref=refs/tags/ginrose-0.3.9";
+      url = "github:nunreasonable/rosemary?ref=refs/tags/ginrose-26.0.5.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

@@ -443,7 +443,7 @@ dependencies = [
 
 [[package]]
 name = "ginrose"
-version = "26.0.4"
+version = "26.0.5"
 dependencies = [
  "cms",
  "der",
