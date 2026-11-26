@@ -15,8 +15,8 @@ source=(
     "https://github.com/nunreasonable/ginrose-flatpak/releases/download/v$pkgver/ginrose-$pkgver-x86_64.tar.gz"
     "https://github.com/nunreasonable/ginrose-studio/releases/download/v$pkgver/ginrose-studio-$pkgver-x86_64.tar.gz"
 )
-sha256sums=('43aa056836443ffac597cd8f983d92ca699d6a35d0b73007d78a0bfc45c43ce8'
-            'ef9cdbe08f2476533cfc384ca757e7ef7b12a7e1b8d0844dd65acd5ccb0ff2bd')
+sha256sums=('9eb93a51c27830b68b10996ddd3c3c2ec1ba9d52af9804c3156352d07b232f7b'
+            '532d60db2877afb823c7aa1eb57cc9dee16a753bd52486de39839659f9c3b63e')
 
 _rosemary_optdepends=(
     'rosemary: use the rosemary package instead of a downloaded Rosemary'
